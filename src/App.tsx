@@ -44,6 +44,7 @@ import {
   ArrowRight,
   Check,
   X,
+  Menu,
   FilePlus,
   Activity
 } from 'lucide-react';
@@ -465,7 +466,7 @@ const SignUp = () => {
         <form className="mt-8 space-y-4" onSubmit={handleSignUp}>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
-              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">First Name</label>
+              <label className="text-[10px] font-black text-black uppercase tracking-widest">First Name</label>
               <Input 
                 placeholder="FIRST_NAME" 
                 className="font-mono text-sm uppercase placeholder:text-gray-300"
@@ -475,7 +476,7 @@ const SignUp = () => {
               />
             </div>
             <div className="space-y-1">
-              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Last Name</label>
+              <label className="text-[10px] font-black text-black uppercase tracking-widest">Last Name</label>
               <Input 
                 placeholder="LAST_NAME" 
                 className="font-mono text-sm uppercase placeholder:text-gray-300"
@@ -486,7 +487,7 @@ const SignUp = () => {
             </div>
           </div>
           <div className="space-y-1">
-            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Email Address</label>
+            <label className="text-[10px] font-black text-black uppercase tracking-widest">Email Address</label>
             <Input 
               type="email" 
               placeholder="SYSTEM_EMAIL" 
@@ -497,7 +498,7 @@ const SignUp = () => {
             />
           </div>
           <div className="space-y-1">
-            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Access Key</label>
+            <label className="text-[10px] font-black text-black uppercase tracking-widest">Access Key</label>
             <div className="relative">
               <Input 
                 type={showPassword ? "text" : "password"} 
@@ -519,7 +520,7 @@ const SignUp = () => {
           
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
-              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">System Role</label>
+              <label className="text-[10px] font-black text-black uppercase tracking-widest">Assigned Role</label>
               <select 
                 className="w-full h-10 px-3 text-sm border border-gray-200 rounded focus:border-blue-500 outline-none font-mono uppercase"
                 value={formData.role}
@@ -532,7 +533,7 @@ const SignUp = () => {
             </div>
             {formData.role === 'Merchandiser' && (
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Team Node</label>
+                <label className="text-[10px] font-black text-black uppercase tracking-widest">Team Node</label>
                 <select 
                   className="w-full h-10 px-3 text-sm border border-gray-200 rounded focus:border-blue-500 outline-none font-mono uppercase"
                   value={formData.team}
@@ -590,7 +591,7 @@ const WorkflowSkeleton = () => (
   </div>
 );
 
-const Sidebar = () => {
+const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
   const { profile } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -602,68 +603,91 @@ const Sidebar = () => {
     { name: 'Profile', icon: UserIcon, path: '/profile', roles: ['Admin', 'Merchandiser', 'Factory Team'] },
   ];
 
+  const handleNavigate = (path: string) => {
+    navigate(path);
+    onClose();
+  };
+
   return (
-    <div className="w-64 bg-[#0F172A] min-h-screen text-white flex flex-col border-r border-white/10">
-      <div className="p-6 flex items-center gap-3 border-b border-white/5">
-        <div className="bg-blue-600 p-2 rounded shadow-lg shadow-blue-600/20">
-          <Activity className="w-6 h-6" />
-        </div>
-        <div className="flex flex-col">
-          <span className="text-lg font-bold tracking-tight">FMS PRO</span>
-          <span className="text-[10px] text-blue-400 font-mono uppercase tracking-widest">Monitoring System</span>
-        </div>
-      </div>
-      
-      <nav className="flex-1 px-3 py-6 space-y-1">
-        {navItems.filter(item => profile && (item.roles.includes(profile.role) || profile.role === 'Admin')).map((item) => (
-          <button
-            key={item.path}
-            onClick={() => navigate(item.path)}
-            className={cn(
-              "w-full flex items-center gap-3 px-4 py-2.5 rounded transition-all duration-150 group",
-              location.pathname === item.path 
-                ? "bg-blue-600/10 text-blue-400 border-l-2 border-blue-500" 
-                : "text-gray-400 hover:text-white hover:bg-white/5"
-            )}
-          >
-            <item.icon className={cn(
-              "w-4 h-4 transition-colors",
-              location.pathname === item.path ? "text-blue-400" : "text-gray-500 group-hover:text-gray-300"
-            )} />
-            <span className="text-sm font-medium">{item.name}</span>
+    <>
+      {/* Mobile Overlay */}
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden"
+          />
+        )}
+      </AnimatePresence>
+
+      <div className={cn(
+        "fixed inset-y-0 left-0 w-64 bg-[#0F172A] text-white flex flex-col border-r border-white/10 z-50 transition-transform duration-300 lg:relative lg:translate-x-0",
+        isOpen ? "translate-x-0" : "-translate-x-full"
+      )}>
+        <div className="p-6 flex items-center justify-between border-b border-white/5">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded overflow-hidden bg-white flex items-center justify-center">
+              <img 
+                src="https://www.ginzalimited.com/cdn/shop/files/Ginza_logo.jpg?v=1668509673&width=700" 
+                alt="GINZA Logo" 
+                className="w-full h-full object-contain"
+                referrerPolicy="no-referrer"
+              />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-lg font-bold tracking-tight">GINZA FMS</span>
+              <span className="text-[10px] text-blue-400 font-mono uppercase tracking-widest">Monitoring System</span>
+            </div>
+          </div>
+          <button onClick={onClose} className="lg:hidden p-2 text-gray-400 hover:text-white">
+            <X className="w-5 h-5" />
           </button>
-        ))}
-      </nav>
-
-      <div className="p-4 border-t border-white/5">
-        <button 
-          onClick={() => supabase.auth.signOut()}
-          className="w-full flex items-center gap-3 px-4 py-2.5 rounded text-red-400 hover:bg-red-400/10 transition-all duration-150 group"
-        >
-          <LogOut className="w-4 h-4 text-red-500 group-hover:text-red-400" />
-          <span className="text-sm font-bold uppercase tracking-widest">Terminate Session</span>
-        </button>
-      </div>
-
-      <div className="p-4 bg-black/20 border-t border-white/5">
-        <div className="flex items-center gap-3 px-2 py-3 mb-4">
-          <div className="w-9 h-9 rounded bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400 font-bold text-sm">
-            {profile?.first_name?.[0] || '?'}{profile?.last_name?.[0] || '?'}
-          </div>
-          <div className="flex-1 overflow-hidden">
-            <p className="text-xs font-bold truncate text-gray-200">{profile?.first_name || 'User'} {profile?.last_name || ''}</p>
-            <p className="text-[10px] text-blue-400 font-mono uppercase tracking-tighter truncate">{profile?.role || 'No Role'}</p>
-          </div>
         </div>
-        <button
-          onClick={() => supabase.auth.signOut()}
-          className="w-full flex items-center gap-2 px-3 py-2 rounded text-[11px] font-bold uppercase tracking-wider text-gray-500 hover:text-red-400 hover:bg-red-400/5 transition-all"
-        >
-          <LogOut className="w-3.5 h-3.5" />
-          <span>System Logout</span>
-        </button>
+        
+        <nav className="flex-1 px-3 py-6 space-y-1">
+          {navItems.filter(item => profile && (item.roles.includes(profile.role) || profile.role === 'Admin')).map((item) => (
+            <button
+              key={item.path}
+              onClick={() => handleNavigate(item.path)}
+              className={cn(
+                "w-full flex items-center gap-3 px-4 py-2.5 rounded transition-all duration-150 group",
+                location.pathname === item.path 
+                  ? "bg-blue-600/10 text-blue-400 border-l-2 border-blue-500" 
+                  : "text-gray-400 hover:text-white hover:bg-white/5"
+              )}
+            >
+              <item.icon className={cn(
+                "w-4 h-4 transition-colors",
+                location.pathname === item.path ? "text-blue-400" : "text-gray-500 group-hover:text-gray-300"
+              )} />
+              <span className="text-sm font-medium">{item.name}</span>
+            </button>
+          ))}
+        </nav>
+
+        <div className="p-4 bg-black/20 border-t border-white/5">
+          <div className="flex items-center gap-3 px-2 py-3 mb-4">
+            <div className="w-9 h-9 rounded bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400 font-bold text-sm">
+              {profile?.first_name?.[0] || '?'}{profile?.last_name?.[0] || '?'}
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <p className="text-xs font-bold truncate text-gray-200">{profile?.first_name || 'User'} {profile?.last_name || ''}</p>
+              <p className="text-[10px] text-blue-400 font-mono uppercase tracking-tighter truncate">{profile?.role || 'No Role'}</p>
+            </div>
+          </div>
+          <button
+            onClick={() => supabase.auth.signOut()}
+            className="w-full flex items-center gap-2 px-3 py-2 rounded text-[11px] font-bold uppercase tracking-wider text-gray-500 hover:text-red-400 hover:bg-red-400/5 transition-all"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            <span>System Logout</span>
+          </button>
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 
@@ -674,8 +698,16 @@ const Dashboard = () => {
   const [syncing, setSyncing] = useState(false);
   const [autoSync, setAutoSync] = useState(false);
   const [lastSynced, setLastSynced] = useState<string | null>(null);
+  const [currentTime, setCurrentTime] = useState(new Date());
   const autoSyncRef = useRef(autoSync);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     autoSyncRef.current = autoSync;
@@ -778,25 +810,32 @@ const Dashboard = () => {
   const activeProjects = projects.filter(p => p.status === 'Active');
   const completedProjects = projects.filter(p => p.status === 'Completed');
 
+  const istTime = new Intl.DateTimeFormat('en-IN', {
+    timeZone: 'Asia/Kolkata',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  }).format(currentTime);
+
   return (
-    <div className="p-6 space-y-6 bg-[#F8F9FA] min-h-full">
-      <div className="flex justify-between items-end border-b border-gray-200 pb-6">
+    <div className="p-4 lg:p-6 space-y-6 bg-[#F8F9FA] min-h-full">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-4 border-b border-gray-200 pb-6">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <div className="px-2 py-0.5 bg-blue-600 text-white text-[9px] font-bold rounded uppercase tracking-widest">Live</div>
-            <h1 className="text-xl font-black text-gray-900 tracking-tight flex items-center gap-2">
+            <h1 className="text-lg lg:text-xl font-black text-gray-900 tracking-tight flex items-center gap-2">
               PROCESS MONITORING DASHBOARD
             </h1>
           </div>
-          <p className="text-[10px] text-gray-500 font-mono uppercase tracking-widest">
-            OPERATOR: <span className="text-blue-600 font-bold">{profile?.first_name?.toUpperCase()}</span> | 
-            ROLE: <span className="text-blue-600 font-bold">{profile?.role?.toUpperCase() || 'SYSTEM_ADMIN'}</span> | 
-            SESSION_ID: <span className="text-gray-400 font-bold">{profile?.uid?.slice(0, 8).toUpperCase()}</span> |
-            LAST_SYNC: <span className="text-emerald-600 font-bold">{lastSynced ? format(new Date(lastSynced), 'HH:mm:ss') : 'NEVER'}</span>
+          <p className="text-[10px] text-gray-500 font-mono uppercase tracking-widest flex flex-wrap items-center gap-2">
+            <Clock className="w-3 h-3 text-blue-600" />
+            IST TIME: <span className="text-blue-600 font-bold">{istTime}</span> | 
+            DATE: <span className="text-gray-600 font-bold">{format(currentTime, 'dd MMM yyyy')}</span>
           </p>
         </div>
-        <div className="flex gap-2">
-          <div className="flex items-center gap-2 px-3 border border-gray-200 rounded bg-white shadow-sm">
+        <div className="flex flex-wrap gap-2 w-full lg:w-auto">
+          <div className="flex items-center gap-2 px-3 border border-gray-200 rounded bg-white shadow-sm h-9">
             <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Auto Sync</span>
             <input 
               type="checkbox" 
@@ -809,17 +848,17 @@ const Dashboard = () => {
             variant="outline" 
             onClick={() => syncToSheets(projects)} 
             disabled={syncing}
-            className="h-9 text-xs font-bold uppercase tracking-wider border-gray-300 bg-white hover:bg-gray-50 shadow-sm"
+            className="flex-1 lg:flex-none h-9 text-[10px] lg:text-xs font-bold uppercase tracking-wider border-gray-300 bg-white hover:bg-gray-50 shadow-sm"
           >
             <Activity className={cn("w-3.5 h-3.5 mr-2", syncing && "animate-spin")} />
             {syncing ? 'Syncing...' : 'Sync Sheets'}
           </Button>
-          <Button variant="outline" onClick={exportToCSV} className="h-9 text-xs font-bold uppercase tracking-wider border-gray-300 bg-white hover:bg-gray-50 shadow-sm">
+          <Button variant="outline" onClick={exportToCSV} className="flex-1 lg:flex-none h-9 text-[10px] lg:text-xs font-bold uppercase tracking-wider border-gray-300 bg-white hover:bg-gray-50 shadow-sm">
             <FileText className="w-3.5 h-3.5 mr-2" />
             Export CSV
           </Button>
           {(profile?.role === 'Merchandiser' || profile?.role === 'Admin') && (
-            <Button onClick={() => navigate('/new-entry')} className="h-9 text-xs font-bold uppercase tracking-wider bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-600/20">
+            <Button onClick={() => navigate('/new-entry')} className="w-full lg:w-auto h-9 text-[10px] lg:text-xs font-bold uppercase tracking-wider bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-600/20">
               <PlusCircle className="w-3.5 h-3.5 mr-2" />
               New Requirement
             </Button>
@@ -829,33 +868,33 @@ const Dashboard = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {[
-          { label: 'TOTAL PROJECTS', value: projects.length, icon: FileText, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-100' },
-          { label: 'ACTIVE FLOWS', value: activeProjects.length, icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-100' },
-          { label: 'SYSTEM COMPLETED', value: completedProjects.length, icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100' },
-          { label: 'SYSTEM LOAD', value: '12%', icon: Activity, color: 'text-purple-600', bg: 'bg-purple-50', border: 'border-purple-100' }
+          { label: 'TOTAL PROJECTS', value: projects.length, icon: FileText, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-b-blue-500' },
+          { label: 'ACTIVE FLOWS', value: activeProjects.length, icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-b-amber-500' },
+          { label: 'SYSTEM COMPLETED', value: completedProjects.length, icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-b-emerald-500' },
+          { label: 'SYSTEM LOAD', value: '12%', icon: Activity, color: 'text-purple-600', bg: 'bg-purple-50', border: 'border-b-purple-500' }
         ].map((stat, i) => (
-          <div key={i} className={cn("bg-white p-5 border rounded shadow-sm flex items-center gap-4 transition-all hover:shadow-md", stat.border)}>
-            <div className={cn("p-3 rounded", stat.bg, stat.color)}>
+          <div key={i} className={cn("bg-white p-4 border border-gray-100 rounded-lg shadow-md flex items-center gap-4 transition-all hover:shadow-xl hover:-translate-y-1 border-b-4", stat.border)}>
+            <div className={cn("p-2.5 rounded-lg shadow-inner", stat.bg, stat.color)}>
               <stat.icon className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{stat.label}</p>
-              <p className="text-2xl font-mono font-bold text-gray-900">{stat.value.toString().padStart(stat.label.includes('LOAD') ? 0 : 3, '0')}</p>
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{stat.label}</p>
+              <p className="text-2xl font-mono font-black text-gray-900 leading-none mt-1">{stat.value.toString().padStart(stat.label.includes('LOAD') ? 0 : 3, '0')}</p>
             </div>
           </div>
         ))}
       </div>
 
-      <div className="bg-white border border-gray-200 rounded shadow-sm overflow-hidden">
-        <div className="bg-gray-50 px-6 py-3 border-b border-gray-200 flex justify-between items-center">
-          <h2 className="text-xs font-bold uppercase tracking-widest text-gray-500">Live Process Monitoring</h2>
+      <div className="bg-white border border-gray-200 rounded shadow-lg overflow-hidden">
+        <div className="bg-gray-50 px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+          <h2 className="text-sm font-black uppercase tracking-widest text-red-600">Live Process Monitoring</h2>
           <div className="flex items-center gap-2">
-            <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-            <span className="text-[10px] font-mono text-gray-400 uppercase">System Online</span>
+            <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_#10b981]" />
+            <span className="text-[10px] font-mono text-emerald-600 font-bold uppercase">System Online</span>
           </div>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+        <div className="overflow-x-auto no-scrollbar">
+          <table className="w-full text-left border-collapse min-w-[800px]">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200">
                 <th className="fms-header">ID / Project Details</th>
@@ -933,11 +972,11 @@ const NewEntry = () => {
     customerName: '',
     projectName: '',
     poNumber: '',
-    poDate: format(new Date(), 'yyyy-MM-dd'),
+    poDate: '2026-04-04',
     articleName: '',
     color: '',
-    orderDate: format(new Date(), 'yyyy-MM-dd'),
-    dispatchDate: format(addDays(new Date(), 30), 'yyyy-MM-dd'),
+    orderDate: '2026-04-04',
+    dispatchDate: '2026-04-05',
     remark: ''
   });
   const [previewList, setPreviewList] = useState<any[]>([]);
@@ -970,11 +1009,11 @@ const NewEntry = () => {
       ...formData,
       projectName: '',
       poNumber: '',
-      poDate: format(new Date(), 'yyyy-MM-dd'),
+      poDate: '2026-04-04',
       articleName: '',
       color: '',
-      orderDate: format(new Date(), 'yyyy-MM-dd'),
-      dispatchDate: format(addDays(new Date(), 30), 'yyyy-MM-dd'),
+      orderDate: '2026-04-04',
+      dispatchDate: '2026-04-05',
       remark: ''
     });
   };
@@ -1060,9 +1099,9 @@ const NewEntry = () => {
   };
 
   return (
-    <div className="p-8 space-y-8 bg-[#F8F9FA] min-h-screen">
+    <div className="p-4 lg:p-8 space-y-8 bg-[#F8F9FA] min-h-screen">
       <div className="border-b border-gray-200 pb-6">
-        <h1 className="text-2xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
+        <h1 className="text-xl lg:text-2xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
           <PlusCircle className="w-6 h-6 text-blue-600" />
           CUSTOMER REQUIREMENT FORM
         </h1>
@@ -1071,13 +1110,13 @@ const NewEntry = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="bg-white border border-gray-200 rounded shadow-sm overflow-hidden">
-          <div className="bg-gray-50 px-6 py-3 border-b border-gray-200">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-gray-500">Entry Parameters</h2>
+          <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
+            <h2 className="text-sm font-black uppercase tracking-widest text-red-600">Entry Parameters</h2>
           </div>
           <form onSubmit={handleAdd} className="p-6 space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Customer Name</label>
+                <label className="text-[10px] font-black text-black uppercase tracking-widest">Customer Name</label>
                 <input
                   required
                   className="w-full h-9 px-3 text-sm border border-gray-200 rounded focus:border-blue-500 outline-none transition-colors"
@@ -1086,7 +1125,7 @@ const NewEntry = () => {
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Project Name</label>
+                <label className="text-[10px] font-black text-black uppercase tracking-widest">Project Name</label>
                 <input
                   required
                   className="w-full h-9 px-3 text-sm border border-gray-200 rounded focus:border-blue-500 outline-none transition-colors"
@@ -1096,9 +1135,9 @@ const NewEntry = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">PO Number</label>
+                <label className="text-[10px] font-black text-black uppercase tracking-widest">PO Number</label>
                 <input
                   required
                   className="w-full h-9 px-3 text-sm border border-gray-200 rounded focus:border-blue-500 outline-none transition-colors"
@@ -1107,7 +1146,7 @@ const NewEntry = () => {
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">PO Date</label>
+                <label className="text-[10px] font-black text-black uppercase tracking-widest">PO Date</label>
                 <input
                   type="date"
                   required
@@ -1118,9 +1157,9 @@ const NewEntry = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Article Name</label>
+                <label className="text-[10px] font-black text-black uppercase tracking-widest">Article Name</label>
                 <input
                   required
                   className="w-full h-9 px-3 text-sm border border-gray-200 rounded focus:border-blue-500 outline-none transition-colors"
@@ -1129,7 +1168,7 @@ const NewEntry = () => {
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Color</label>
+                <label className="text-[10px] font-black text-black uppercase tracking-widest">Color</label>
                 <input
                   required
                   className="w-full h-9 px-3 text-sm border border-gray-200 rounded focus:border-blue-500 outline-none transition-colors"
@@ -1139,9 +1178,9 @@ const NewEntry = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Order Date</label>
+                <label className="text-[10px] font-black text-black uppercase tracking-widest">Order Date</label>
                 <input
                   type="date"
                   required
@@ -1151,7 +1190,7 @@ const NewEntry = () => {
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Dispatch Date</label>
+                <label className="text-[10px] font-black text-black uppercase tracking-widest">Dispatch Date</label>
                 <input
                   type="date"
                   required
@@ -1163,7 +1202,7 @@ const NewEntry = () => {
             </div>
 
             <div className="space-y-1">
-              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Remarks</label>
+              <label className="text-[10px] font-black text-black uppercase tracking-widest">Remarks</label>
               <textarea
                 className="w-full p-3 text-sm border border-gray-200 rounded focus:border-blue-500 outline-none transition-colors min-h-[80px]"
                 value={formData.remark}
@@ -1179,24 +1218,27 @@ const NewEntry = () => {
         </div>
 
         <div className="bg-white border border-gray-200 rounded shadow-sm overflow-hidden flex flex-col">
-          <div className="bg-gray-50 px-6 py-3 border-b border-gray-200 flex justify-between items-center">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-gray-500">Preview Box</h2>
-            <span className="text-[10px] font-mono text-gray-400 uppercase tracking-widest">Count: {previewList.length.toString().padStart(2, '0')}</span>
+          <div className="bg-gray-50 px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+            <h2 className="text-sm font-black uppercase tracking-widest text-red-600">Preview Box</h2>
+            <span className="text-[10px] font-mono text-emerald-600 font-bold uppercase tracking-widest">Queue: {previewList.length.toString().padStart(2, '0')}</span>
           </div>
           <div className="flex-1 overflow-y-auto p-6 space-y-3 min-h-[400px]">
             {previewList.map((item, idx) => (
-              <div key={item.id} className="p-4 border border-gray-100 rounded bg-gray-50 flex justify-between items-center group relative">
+              <div key={item.id} className="p-4 border border-gray-100 rounded bg-gray-50 flex justify-between items-center group relative shadow-sm">
                 <div className="flex-1">
-                  <div className="flex justify-between items-start">
-                    <p className="text-sm font-bold text-gray-900">{item.projectName}</p>
-                    <span className="text-[10px] font-mono text-blue-600 font-bold">#{idx + 1}</span>
+                  <div className="flex justify-between items-start border-b border-gray-200 pb-2 mb-2">
+                    <p className="text-sm font-black text-blue-700 uppercase tracking-tight">{item.projectName}</p>
+                    <span className="text-[10px] font-mono text-gray-400 font-bold">ENTRY #{idx + 1}</span>
                   </div>
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 mt-2">
-                    <p className="text-[10px] font-mono text-gray-500 uppercase"><span className="text-gray-400">CUST:</span> {item.customerName}</p>
-                    <p className="text-[10px] font-mono text-gray-500 uppercase"><span className="text-gray-400">PO:</span> {item.poNumber}</p>
-                    <p className="text-[10px] font-mono text-gray-500 uppercase"><span className="text-gray-400">ART:</span> {item.articleName}</p>
-                    <p className="text-[10px] font-mono text-gray-500 uppercase"><span className="text-gray-400">CLR:</span> {item.color}</p>
-                    <p className="text-[10px] font-mono text-gray-500 uppercase"><span className="text-gray-400">DISP:</span> {item.dispatchDate}</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
+                    <p className="text-[10px] font-mono text-gray-700 uppercase"><span className="text-black font-black">CUSTOMER:</span> {item.customerName}</p>
+                    <p className="text-[10px] font-mono text-gray-700 uppercase"><span className="text-black font-black">PO NO:</span> {item.poNumber}</p>
+                    <p className="text-[10px] font-mono text-gray-700 uppercase"><span className="text-black font-black">PO DATE:</span> {item.poDate}</p>
+                    <p className="text-[10px] font-mono text-gray-700 uppercase"><span className="text-black font-black">ARTICLE:</span> {item.articleName}</p>
+                    <p className="text-[10px] font-mono text-gray-700 uppercase"><span className="text-black font-black">COLOR:</span> {item.color}</p>
+                    <p className="text-[10px] font-mono text-gray-700 uppercase"><span className="text-black font-black">ORDER DT:</span> {item.orderDate}</p>
+                    <p className="text-[10px] font-mono text-gray-700 uppercase"><span className="text-black font-black">DISPATCH:</span> {item.dispatchDate}</p>
+                    {item.remark && <p className="text-[10px] font-mono text-gray-700 uppercase col-span-2"><span className="text-black font-black">REMARKS:</span> {item.remark}</p>}
                   </div>
                 </div>
                 <button 
@@ -1311,20 +1353,22 @@ const ProjectDetail = () => {
   const isAssigned = profile?.email === currentStep?.assignedToEmail || profile?.role === 'Admin';
 
   return (
-    <div className="p-8 space-y-8 max-w-6xl mx-auto">
-      <div className="flex items-center gap-4">
-        <button onClick={() => navigate(-1)} className="p-2 hover:bg-gray-100 rounded-full">
-          <ChevronRight className="w-6 h-6 rotate-180" />
-        </button>
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">{project.project_name}</h1>
-          <p className="text-gray-500">PO: {project.po_number} | {project.customer_name}</p>
+    <div className="p-4 lg:p-8 space-y-6 lg:space-y-8 max-w-6xl mx-auto">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+        <div className="flex items-center gap-4">
+          <button onClick={() => navigate(-1)} className="p-2 hover:bg-gray-100 rounded-full shrink-0">
+            <ChevronRight className="w-6 h-6 rotate-180" />
+          </button>
+          <div className="overflow-hidden">
+            <h1 className="text-xl lg:text-3xl font-bold text-gray-900 truncate">{project.project_name}</h1>
+            <p className="text-xs lg:text-sm text-gray-500 truncate uppercase tracking-widest font-mono">PO: {project.po_number} | {project.customer_name}</p>
+          </div>
         </div>
       </div>
 
       {/* Progress Stepper */}
-      <div className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm overflow-x-auto">
-        <div className="flex items-center min-w-[1000px]">
+      <div className="bg-white p-6 lg:p-8 rounded-2xl border border-gray-100 shadow-sm overflow-x-auto no-scrollbar">
+        <div className="flex items-center min-w-[1000px] pb-16">
           {project.steps.map((step, index) => (
             <React.Fragment key={index}>
               <div className="flex flex-col items-center relative group">
@@ -1547,16 +1591,16 @@ const WorkflowConfigView = () => {
   if (loading) return <WorkflowSkeleton />;
 
   return (
-    <div className="p-8 space-y-8 bg-[#F8F9FA] min-h-screen">
-      <div className="flex justify-between items-end border-b border-gray-200 pb-6">
+    <div className="p-4 lg:p-8 space-y-6 lg:space-y-8 bg-[#F8F9FA] min-h-screen">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-4 border-b border-gray-200 pb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
+          <h1 className="text-xl lg:text-2xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
             <Settings className="w-6 h-6 text-blue-600" />
             WORKFLOW ENGINE CONFIGURATION
           </h1>
           <p className="text-xs text-gray-500 font-mono mt-1 uppercase tracking-widest">Process Definition Module</p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-3 w-full lg:w-auto">
           <Button 
             variant="outline"
             onClick={() => {
@@ -1568,28 +1612,29 @@ const WorkflowConfigView = () => {
               setSteps(initialSteps);
               toast.info('Steps reset to default list. Click "COMMIT CHANGES" to save.');
             }}
-            className="h-10 px-6 text-xs font-bold uppercase tracking-wider border-gray-200 text-gray-600 hover:bg-gray-50"
+            className="flex-1 lg:flex-none h-10 px-4 lg:px-6 text-[10px] lg:text-xs font-bold uppercase tracking-wider border-gray-200 text-gray-600 hover:bg-gray-50"
           >
             Reset to Default
           </Button>
           <Button 
             onClick={handleSave} 
             disabled={saving}
-            className="h-10 px-6 text-xs font-bold uppercase tracking-wider bg-blue-600 hover:bg-blue-700"
+            className="flex-1 lg:flex-none h-10 px-4 lg:px-6 text-[10px] lg:text-xs font-bold uppercase tracking-wider bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-600/20"
           >
             {saving ? 'SYNCHRONIZING...' : 'COMMIT CHANGES'}
           </Button>
         </div>
       </div>
 
-      <div className="bg-white border border-gray-200 rounded shadow-sm overflow-hidden">
-        <table className="w-full text-left border-collapse">
+      <div className="bg-white border border-gray-200 rounded shadow-lg overflow-hidden">
+        <div className="overflow-x-auto no-scrollbar">
+          <table className="w-full text-left border-collapse min-w-[800px]">
           <thead>
-            <tr className="bg-gray-50 border-b border-gray-200">
-              <th className="px-6 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Sequence</th>
-              <th className="px-6 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Process Step Name</th>
-              <th className="px-6 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Default Assignee (Email)</th>
-              <th className="px-6 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-widest">TAT (Days)</th>
+            <tr className="bg-gray-100 border-b-2 border-black">
+              <th className="px-6 py-4 text-[11px] font-black text-black uppercase tracking-widest">Sequence</th>
+              <th className="px-6 py-4 text-[11px] font-black text-black uppercase tracking-widest">Process Step Name</th>
+              <th className="px-6 py-4 text-[11px] font-black text-black uppercase tracking-widest">Default Assignee (Email)</th>
+              <th className="px-6 py-4 text-[11px] font-black text-black uppercase tracking-widest">TAT (Days)</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
@@ -1632,7 +1677,8 @@ const WorkflowConfigView = () => {
         </table>
       </div>
     </div>
-  );
+  </div>
+);
 };
 
 const Profile = () => {
@@ -1678,9 +1724,9 @@ const Profile = () => {
   };
 
   return (
-    <div className="p-8 space-y-8 bg-[#F8F9FA] min-h-screen">
+    <div className="p-4 lg:p-8 space-y-6 lg:space-y-8 bg-[#F8F9FA] min-h-screen">
       <div className="border-b border-gray-200 pb-6">
-        <h1 className="text-2xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
+        <h1 className="text-xl lg:text-2xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
           <UserIcon className="w-6 h-6 text-blue-600" />
           USER PROFILE SETTINGS
         </h1>
@@ -1689,19 +1735,19 @@ const Profile = () => {
 
       <div className="max-w-xl bg-white border border-gray-200 rounded shadow-sm overflow-hidden">
         <div className="bg-gray-50 px-6 py-4 border-b border-gray-200 flex items-center gap-4">
-          <div className="w-12 h-12 rounded bg-blue-600/10 border border-blue-500/30 flex items-center justify-center text-blue-600 font-bold text-lg">
+          <div className="w-12 h-12 rounded bg-blue-600/10 border border-blue-500/30 flex items-center justify-center text-blue-600 font-bold text-lg shrink-0">
             {profile?.first_name?.[0] || '?'}{profile?.last_name?.[0] || '?'}
           </div>
-          <div>
-            <p className="text-sm font-bold text-gray-900">{profile?.email}</p>
-            <p className="text-[10px] text-blue-600 font-mono uppercase tracking-widest">SYSTEM_UID: {profile?.uid?.slice(0, 8)}...</p>
+          <div className="overflow-hidden">
+            <p className="text-sm font-bold text-gray-900 truncate">{profile?.email}</p>
+            <p className="text-[10px] text-blue-600 font-mono uppercase tracking-widest truncate">SYSTEM_UID: {profile?.uid?.slice(0, 8)}...</p>
           </div>
         </div>
 
         <form onSubmit={handleUpdate} className="p-6 space-y-6">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1">
-              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">First Name</label>
+              <label className="text-[10px] font-black text-black uppercase tracking-widest">First Name</label>
               <input
                 required
                 className="w-full h-9 px-3 text-sm border border-gray-200 rounded focus:border-blue-500 outline-none transition-colors"
@@ -1710,7 +1756,7 @@ const Profile = () => {
               />
             </div>
             <div className="space-y-1">
-              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Last Name</label>
+              <label className="text-[10px] font-black text-black uppercase tracking-widest">Last Name</label>
               <input
                 required
                 className="w-full h-9 px-3 text-sm border border-gray-200 rounded focus:border-blue-500 outline-none transition-colors"
@@ -1721,7 +1767,7 @@ const Profile = () => {
           </div>
 
           <div className="space-y-1">
-            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Assigned Role</label>
+            <label className="text-[10px] font-black text-black uppercase tracking-widest">Assigned Role</label>
             <div className="w-full h-9 px-3 text-sm border border-gray-200 rounded bg-gray-50 flex items-center text-gray-500 font-mono">
               {profile?.role?.toUpperCase() || 'NO_ROLE_ASSIGNED'}
             </div>
@@ -1729,7 +1775,7 @@ const Profile = () => {
 
           {profile?.role === 'Merchandiser' && (
             <div className="space-y-1">
-              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Team Assignment</label>
+              <label className="text-[10px] font-black text-black uppercase tracking-widest">Team Assignment</label>
               <select
                 className="w-full h-9 px-3 text-sm border border-gray-200 rounded focus:border-blue-500 outline-none transition-colors"
                 value={formData.team}
@@ -1785,6 +1831,8 @@ const AppContent = () => {
     );
   }
 
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
   if (loading && !user) return <LoadingScreen />;
 
   if (!user) {
@@ -1793,33 +1841,53 @@ const AppContent = () => {
   }
 
   return (
-    <div className="flex bg-[#F1F5F9] min-h-screen font-sans">
-      <Sidebar />
-      <main className="flex-1 flex flex-col h-screen overflow-hidden">
+    <div className="flex bg-[#F1F5F9] min-h-screen font-sans overflow-hidden">
+      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+      
+      <main className="flex-1 flex flex-col h-screen overflow-hidden relative">
+        {/* Mobile Header */}
+        <div className="lg:hidden h-14 bg-[#0F172A] text-white flex items-center justify-between px-4 shrink-0 z-30 shadow-lg">
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => setIsSidebarOpen(true)}
+              className="p-2 -ml-2 text-gray-300 hover:text-white"
+            >
+              <Menu className="w-6 h-6" />
+            </button>
+            <div className="flex flex-col">
+              <span className="text-sm font-bold tracking-tight">GINZA FMS</span>
+              <span className="text-[8px] text-blue-400 font-mono uppercase tracking-widest">Monitoring</span>
+            </div>
+          </div>
+          <div className="w-8 h-8 rounded bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400 font-bold text-xs">
+            {profile?.first_name?.[0] || '?'}{profile?.last_name?.[0] || '?'}
+          </div>
+        </div>
+
         {/* System Status Bar */}
-        <div className="h-10 bg-white border-b border-gray-200 flex items-center justify-between px-6 shrink-0">
-          <div className="flex items-center gap-6">
+        <div className="h-10 bg-white border-b border-gray-200 flex items-center justify-between px-4 lg:px-6 shrink-0 overflow-x-auto no-scrollbar">
+          <div className="flex items-center gap-4 lg:gap-6 whitespace-nowrap">
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-              <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">System Operational</span>
+              <span className="text-[9px] lg:text-[10px] font-bold text-gray-500 uppercase tracking-widest">System Operational</span>
             </div>
             <div className="h-4 w-px bg-gray-200" />
             <div className="flex items-center gap-2">
               <Clock className="w-3 h-3 text-gray-400" />
-              <span className="text-[10px] font-mono text-gray-400 uppercase">{format(new Date(), 'HH:mm:ss')} UTC</span>
+              <span className="text-[9px] lg:text-[10px] font-mono text-gray-400 uppercase">{format(new Date(), 'HH:mm:ss')} UTC</span>
             </div>
-            <div className="h-4 w-px bg-gray-200" />
-            <div className="flex items-center gap-2">
+            <div className="hidden sm:flex items-center gap-2">
+              <div className="h-4 w-px bg-gray-200 mr-2" />
               <Activity className="w-3 h-3 text-blue-500" />
-              <span className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">Load: {Math.floor(Math.random() * 5) + 12}%</span>
+              <span className="text-[9px] lg:text-[10px] font-mono text-gray-500 uppercase tracking-widest">Load: 12%</span>
             </div>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="hidden md:flex items-center gap-4 whitespace-nowrap">
             <div className="flex items-center gap-2 px-2 py-0.5 bg-blue-50 border border-blue-100 rounded">
               <span className="text-[9px] font-bold text-blue-600 uppercase tracking-tighter">Node: {location.pathname.toUpperCase()}</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Version 2.1.0-PRO</span>
+              <span className="text-[9px] lg:text-[10px] font-bold text-gray-400 uppercase tracking-widest">V2.1.0-PRO</span>
             </div>
           </div>
         </div>

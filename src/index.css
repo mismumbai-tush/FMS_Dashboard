@@ -34,14 +34,14 @@ body {
 
 .fms-header {
   font-family: var(--font-sans);
-  font-weight: 700;
+  font-weight: 800;
   font-size: 10px;
-  color: #6B7280;
+  color: #000000;
   text-transform: uppercase;
   letter-spacing: 0.1em;
   background: #F9FAFB;
   padding: 0.75rem 1.5rem;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 2px solid #000000;
 }
 
 .fms-value {
@@ -59,5 +59,15 @@ body {
 @layer base {
   * {
     @apply border-gray-200;
+  }
+}
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
 }
