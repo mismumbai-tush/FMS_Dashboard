@@ -13,10 +13,32 @@ async function startServer() {
 
   app.use(express.json());
 
+  // Request Logger
+  app.use((req, res, next) => {
+    console.log(`[SERVER] ${req.method} ${req.url}`);
+    next();
+  });
+
   // API routes
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok" });
   });
+
+  const getGoogleAuth = (serviceAccountKey: string) => {
+    try {
+      const credentials = JSON.parse(serviceAccountKey);
+      return new google.auth.GoogleAuth({
+        credentials,
+        scopes: ["https://www.googleapis.com/auth/spreadsheets"],
+      });
+    } catch (e: any) {
+      console.error("[SERVER] Google Service Account Key Parse Error:", e.message);
+      console.error("[SERVER] Key starts with:", serviceAccountKey.substring(0, 20) + "...");
+      console.error("[SERVER] Key ends with:", serviceAccountKey.substring(serviceAccountKey.length - 20) + "...");
+      console.error("[SERVER] Key length:", serviceAccountKey.length);
+      throw new Error("Invalid Google Service Account Key format. Please ensure it is a valid JSON string.");
+    }
+  };
 
   // Google Sheets Sync Route
   app.post("/api/sync-sheets", async (req, res) => {
@@ -29,18 +51,7 @@ async function startServer() {
         return res.status(400).json({ error: "Google Sheets configuration missing." });
       }
 
-      let credentials;
-      try {
-        credentials = JSON.parse(serviceAccountKey);
-      } catch (e) {
-        return res.status(400).json({ error: "Invalid Google Service Account Key format." });
-      }
-
-      const auth = new google.auth.GoogleAuth({
-        credentials,
-        scopes: ["https://www.googleapis.com/auth/spreadsheets"],
-      });
-
+      const auth = getGoogleAuth(serviceAccountKey);
       const sheets = google.sheets({ version: "v4", auth });
 
       // Prepare headers
@@ -92,18 +103,7 @@ async function startServer() {
         return res.status(400).json({ error: "Google Sheets configuration missing." });
       }
 
-      let credentials;
-      try {
-        credentials = JSON.parse(serviceAccountKey);
-      } catch (e) {
-        return res.status(400).json({ error: "Invalid Google Service Account Key format." });
-      }
-
-      const auth = new google.auth.GoogleAuth({
-        credentials,
-        scopes: ["https://www.googleapis.com/auth/spreadsheets"],
-      });
-
+      const auth = getGoogleAuth(serviceAccountKey);
       const sheets = google.sheets({ version: "v4", auth });
 
       // Get current data to determine serial number and next row

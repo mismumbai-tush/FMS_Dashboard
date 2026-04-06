@@ -64,7 +64,7 @@ const sendEmailNotification = async (email: string, stepName: string, projectNam
     ? `New Project Assigned: ${projectName}` 
     : `Action Required: New Step in ${projectName}`;
     
-  const baseUrl = 'https://fms-dashboard-two.vercel.app';
+  const baseUrl = window.location.origin;
   const dashboardLink = projectId ? `${baseUrl}/project/${projectId}` : baseUrl;
   const html = `
     <div style="font-family: sans-serif; padding: 20px; color: #333; border: 1px solid #eee; border-radius: 12px; max-width: 600px; margin: auto;">
@@ -88,6 +88,7 @@ const sendEmailNotification = async (email: string, stepName: string, projectNam
   `;
 
   try {
+    console.log(`Attempting to send email to: ${email}, Subject: ${subject}`);
     const response = await fetch('/api/send-email', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -99,7 +100,10 @@ const sendEmailNotification = async (email: string, stepName: string, projectNam
     });
     
     if (!response.ok) {
-      console.error('Failed to send email notification');
+      const errorData = await response.json();
+      console.error('Failed to send email notification:', errorData);
+    } else {
+      console.log('Email notification sent successfully');
     }
   } catch (error) {
     console.error('Email notification error:', error);
@@ -972,15 +976,18 @@ const Dashboard = () => {
 
 const NewEntry = () => {
   const { profile } = useAuth();
+  const today = format(new Date(), 'yyyy-MM-dd');
+  const tomorrow = format(addDays(new Date(), 1), 'yyyy-MM-dd');
+  
   const [formData, setFormData] = useState({
     customerName: '',
     projectName: '',
     poNumber: '',
-    poDate: '2026-04-04',
+    poDate: today,
     articleName: '',
     color: '',
-    orderDate: '2026-04-04',
-    dispatchDate: '2026-04-05',
+    orderDate: today,
+    dispatchDate: tomorrow,
     remark: ''
   });
   const [previewList, setPreviewList] = useState<any[]>([]);
@@ -1013,11 +1020,11 @@ const NewEntry = () => {
       ...formData,
       projectName: '',
       poNumber: '',
-      poDate: '2026-04-04',
+      poDate: today,
       articleName: '',
       color: '',
-      orderDate: '2026-04-04',
-      dispatchDate: '2026-04-05',
+      orderDate: today,
+      dispatchDate: tomorrow,
       remark: ''
     });
   };
@@ -1420,8 +1427,9 @@ const ProjectDetail = () => {
             <div className="space-y-3">
               <InfoRow label="Article" value={project.article_name} />
               <InfoRow label="Color" value={project.color} />
-              <InfoRow label="Order Date" value={project.order_date} />
-              <InfoRow label="Dispatch Date" value={project.dispatch_date} />
+              <InfoRow label="PO Date" value={project.po_date ? format(new Date(project.po_date), 'PPP') : 'N/A'} />
+              <InfoRow label="Order Date" value={project.order_date ? format(new Date(project.order_date), 'PPP') : 'N/A'} />
+              <InfoRow label="Dispatch Date" value={project.dispatch_date ? format(new Date(project.dispatch_date), 'PPP') : 'N/A'} />
               <InfoRow label="Merchandiser" value={project.merchandiser_name} />
               <div className="pt-4 border-t border-gray-50">
                 <p className="text-xs font-semibold text-gray-400 uppercase">Remark</p>
@@ -1659,7 +1667,7 @@ const WorkflowConfigView = () => {
                     value={step.assignedToEmail}
                     onChange={(e) => {
                       const newSteps = [...steps];
-                      newSteps[index] = { ...newSteps[index], assignedToEmail: e.target.value };
+                      newSteps[index] = { ...newSteps[index], assignedToEmail: e.target.value.trim() };
                       setSteps(newSteps);
                     }}
                   />
