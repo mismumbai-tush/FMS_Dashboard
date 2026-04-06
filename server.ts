@@ -26,19 +26,30 @@ apiRouter.get("/health", (req, res) => {
 
 // Email Sending Route
 apiRouter.post("/send-email", async (req, res) => {
+  console.log(`[API] Attempting to send email to: ${req.body.to}`);
   try {
     const { to, subject, text, html } = req.body;
     const user = process.env.SMTP_USER;
     const pass = process.env.SMTP_PASS;
 
     if (!user || !pass) {
-      return res.status(400).json({ error: "Email configuration missing." });
+      console.error("[API] SMTP Credentials missing in environment variables");
+      return res.status(400).json({ error: "Email configuration missing on server." });
     }
 
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: { user, pass },
     });
+
+    // Verify connection configuration
+    try {
+      await transporter.verify();
+      console.log("[API] SMTP Connection verified successfully");
+    } catch (verifyError) {
+      console.error("[API] SMTP Verification failed:", verifyError);
+      throw verifyError;
+    }
 
     const info = await transporter.sendMail({
       from: `"FMS System" <${user}>`,
@@ -48,10 +59,15 @@ apiRouter.post("/send-email", async (req, res) => {
       html,
     });
 
+    console.log("[API] Email sent successfully:", info.messageId);
     res.json({ success: true, messageId: info.messageId });
   } catch (error: any) {
-    console.error("Email Sending Error:", error);
-    res.status(500).json({ error: error.message || "Failed to send email." });
+    console.error("[API] Email Sending Error details:", error);
+    res.status(500).json({ 
+      error: error.message || "Failed to send email.",
+      code: error.code,
+      command: error.command
+    });
   }
 });
 
@@ -80,8 +96,6 @@ async function startServer() {
   });
 }
 
-if (process.env.NODE_ENV !== "production") {
-  startServer();
-}
+startServer();
 
 export default app;

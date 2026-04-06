@@ -1306,7 +1306,7 @@ const ProjectDetail = () => {
   if (!project) return <div className="p-8">Project not found</div>;
 
   const currentStep = project.steps[project.current_step_index];
-  const isAssigned = profile?.email === currentStep?.assignedToEmail || profile?.role === 'Admin';
+  const isAssigned = profile?.email === currentStep?.assignedToEmail;
 
   return (
     <div className="p-4 lg:p-8 space-y-6 lg:space-y-8 max-w-6xl mx-auto">
