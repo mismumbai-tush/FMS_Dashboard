@@ -230,11 +230,14 @@ const Login = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    console.log('Attempting login for:', email);
+    const trimmedEmail = email.trim();
+    console.log('Attempting login for:', trimmedEmail);
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data, error } = await supabase.auth.signInWithPassword({ email: trimmedEmail, password });
       if (error) {
-        console.error('Login error:', error);
+        if (error.message === 'Invalid login credentials') {
+          throw new Error("Invalid email or password. Please check your credentials or create a new account if you haven't already.");
+        }
         throw error;
       }
       console.log('Login successful:', data);
