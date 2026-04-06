@@ -1,7 +1,6 @@
 import express from "express";
 import { createServer as createViteServer } from "vite";
 import path from "path";
-import { google } from "googleapis";
 import nodemailer from "nodemailer";
 import dotenv from "dotenv";
 
@@ -22,128 +21,6 @@ async function startServer() {
   // API routes
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok" });
-  });
-
-  const getGoogleAuth = (serviceAccountKey: string) => {
-    try {
-      const credentials = JSON.parse(serviceAccountKey);
-      return new google.auth.GoogleAuth({
-        credentials,
-        scopes: ["https://www.googleapis.com/auth/spreadsheets"],
-      });
-    } catch (e: any) {
-      console.error("[SERVER] Google Service Account Key Parse Error:", e.message);
-      console.error("[SERVER] Key starts with:", serviceAccountKey.substring(0, 20) + "...");
-      console.error("[SERVER] Key ends with:", serviceAccountKey.substring(serviceAccountKey.length - 20) + "...");
-      console.error("[SERVER] Key length:", serviceAccountKey.length);
-      throw new Error("Invalid Google Service Account Key format. Please ensure it is a valid JSON string.");
-    }
-  };
-
-  // Google Sheets Sync Route
-  app.post("/api/sync-sheets", async (req, res) => {
-    try {
-      const { projects } = req.body;
-      const sheetId = process.env.GOOGLE_SHEET_ID;
-      const serviceAccountKey = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
-
-      if (!sheetId || !serviceAccountKey) {
-        return res.status(400).json({ error: "Google Sheets configuration missing." });
-      }
-
-      const auth = getGoogleAuth(serviceAccountKey);
-      const sheets = google.sheets({ version: "v4", auth });
-
-      // Prepare headers
-      const headers = [
-        "Project Name", "Customer", "PO Number", "PO Date", "Article", "Color", 
-        "Order Date", "Dispatch Date", "Current Step", "Status", "Created At"
-      ];
-
-      // Prepare rows
-      const rows = projects.map((p: any) => [
-        p.project_name,
-        p.customer_name,
-        p.po_number,
-        p.po_date,
-        p.article_name,
-        p.color,
-        p.order_date,
-        p.dispatch_date,
-        p.steps[p.current_step_index]?.name || 'Completed',
-        p.status,
-        p.created_at
-      ]);
-
-      const values = [headers, ...rows];
-
-      // Update the sheet
-      await sheets.spreadsheets.values.update({
-        spreadsheetId: sheetId,
-        range: "Sheet1!A1",
-        valueInputOption: "RAW",
-        requestBody: { values },
-      });
-
-      res.json({ success: true, message: "Google Sheet updated successfully." });
-    } catch (error: any) {
-      console.error("Google Sheets Sync Error:", error);
-      res.status(500).json({ error: error.message || "Failed to sync with Google Sheets." });
-    }
-  });
-
-  // Google Sheets Append Entry Route
-  app.post("/api/append-entry", async (req, res) => {
-    try {
-      const { entries } = req.body;
-      const sheetId = process.env.GOOGLE_SHEET_ID;
-      const serviceAccountKey = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
-
-      if (!sheetId || !serviceAccountKey) {
-        return res.status(400).json({ error: "Google Sheets configuration missing." });
-      }
-
-      const auth = getGoogleAuth(serviceAccountKey);
-      const sheets = google.sheets({ version: "v4", auth });
-
-      // Get current data to determine serial number and next row
-      const response = await sheets.spreadsheets.values.get({
-        spreadsheetId: sheetId,
-        range: "Sheet1!A9:A",
-      });
-
-      const existingRows = response.data.values || [];
-      let nextSerialNumber = existingRows.length + 1;
-      const timestamp = new Date().toLocaleString();
-
-      const rowsToAppend = entries.map((item: any, index: number) => [
-        nextSerialNumber + index,
-        timestamp,
-        item.customerName,
-        item.projectName,
-        item.poNumber,
-        item.poDate,
-        item.articleName,
-        item.color,
-        item.orderDate,
-        item.dispatchDate,
-        item.remark
-      ]);
-
-      // Append to the sheet starting from A9
-      // If the sheet is empty below row 8, it will start at A9
-      await sheets.spreadsheets.values.append({
-        spreadsheetId: sheetId,
-        range: "Sheet1!A9",
-        valueInputOption: "RAW",
-        requestBody: { values: rowsToAppend },
-      });
-
-      res.json({ success: true, message: "Entries appended to Google Sheet." });
-    } catch (error: any) {
-      console.error("Google Sheets Append Error:", error);
-      res.status(500).json({ error: error.message || "Failed to append to Google Sheets." });
-    }
   });
 
   // Email Sending Route

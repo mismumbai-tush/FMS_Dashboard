@@ -605,10 +605,10 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
   const location = useLocation();
 
   const navItems = [
-    { name: 'Dashboard', icon: LayoutDashboard, path: '/', roles: ['Admin', 'Merchandiser', 'Factory Team'] },
-    { name: 'Customer Requirement', icon: FilePlus, path: '/new-entry', roles: ['Merchandiser', 'Admin'] },
-    { name: 'Workflow Config', icon: Settings, path: '/config', roles: ['Admin'] },
-    { name: 'Profile', icon: UserIcon, path: '/profile', roles: ['Admin', 'Merchandiser', 'Factory Team'] },
+    { name: 'Dashboard', icon: LayoutDashboard, path: '/', roles: ['Admin', 'Merchandiser', 'Factory Team'], color: 'text-blue-500' },
+    { name: 'Customer Requirement', icon: FilePlus, path: '/new-entry', roles: ['Merchandiser', 'Admin'], color: 'text-amber-500' },
+    { name: 'Workflow Config', icon: Settings, path: '/config', roles: ['Admin'], color: 'text-purple-500' },
+    { name: 'Profile', icon: UserIcon, path: '/profile', roles: ['Admin', 'Merchandiser', 'Factory Team'], color: 'text-emerald-500' },
   ];
 
   const handleNavigate = (path: string) => {
@@ -655,23 +655,41 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
           </button>
         </div>
         
-        <nav className="flex-1 px-3 py-6 space-y-1">
+        <nav className="flex-1 px-3 py-6 space-y-2">
           {navItems.filter(item => profile && (item.roles.includes(profile.role) || profile.role === 'Admin')).map((item) => (
             <button
               key={item.path}
               onClick={() => handleNavigate(item.path)}
               className={cn(
-                "w-full flex items-center gap-3 px-4 py-2.5 rounded transition-all duration-150 group",
+                "w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 group relative overflow-hidden",
                 location.pathname === item.path 
-                  ? "bg-blue-600/10 text-blue-400 border-l-2 border-blue-500" 
+                  ? "bg-white/10 text-white shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1)]" 
                   : "text-gray-400 hover:text-white hover:bg-white/5"
               )}
             >
-              <item.icon className={cn(
-                "w-4 h-4 transition-colors",
-                location.pathname === item.path ? "text-blue-400" : "text-gray-500 group-hover:text-gray-300"
-              )} />
-              <span className="text-sm font-medium">{item.name}</span>
+              <div className={cn(
+                "p-2 rounded-md flex items-center justify-center transition-all duration-300 shadow-lg",
+                location.pathname === item.path 
+                  ? cn("bg-gradient-to-br shadow-[0_4px_12px_-2px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.2)] scale-110", 
+                       item.color.replace('text-', 'from-').replace('500', '600') + " " + item.color.replace('text-', 'to-').replace('500', '400'))
+                  : "bg-gray-800/50 text-gray-500 group-hover:bg-gray-700/50 group-hover:text-gray-300"
+              )}>
+                <item.icon className={cn(
+                  "w-4 h-4 drop-shadow-[0_2px_2px_rgba(0,0,0,0.5)]",
+                  location.pathname === item.path ? "text-white" : ""
+                )} />
+              </div>
+              <span className={cn(
+                "text-sm font-bold tracking-tight transition-all",
+                location.pathname === item.path ? "translate-x-1" : ""
+              )}>{item.name}</span>
+              
+              {location.pathname === item.path && (
+                <motion.div 
+                  layoutId="activeNav"
+                  className="absolute left-0 w-1 h-6 bg-white rounded-r-full"
+                />
+              )}
             </button>
           ))}
         </nav>
@@ -703,11 +721,7 @@ const Dashboard = () => {
   const { profile } = useAuth();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
-  const [syncing, setSyncing] = useState(false);
-  const [autoSync, setAutoSync] = useState(false);
-  const [lastSynced, setLastSynced] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
-  const autoSyncRef = useRef(autoSync);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -716,34 +730,6 @@ const Dashboard = () => {
     }, 1000);
     return () => clearInterval(timer);
   }, []);
-
-  useEffect(() => {
-    autoSyncRef.current = autoSync;
-  }, [autoSync]);
-
-  const syncToSheets = async (data: Project[]) => {
-    if (data.length === 0) return;
-    setSyncing(true);
-    try {
-      const response = await fetch('/api/sync-sheets', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ projects: data })
-      });
-      const result = await response.json();
-      if (result.success) {
-        toast.success('Google Sheet updated successfully');
-        setLastSynced(new Date().toISOString());
-      } else {
-        throw new Error(result.error || 'Sync failed');
-      }
-    } catch (error: any) {
-      console.error('Sync Error:', error);
-      toast.error(error.message || 'Failed to sync with Google Sheets');
-    } finally {
-      setSyncing(false);
-    }
-  };
 
   useEffect(() => {
     if (!profile) {
@@ -769,11 +755,6 @@ const Dashboard = () => {
 
       setProjects(filtered);
       setLoading(false);
-
-      // Automatic Sync
-      if (autoSyncRef.current && filtered.length > 0) {
-        syncToSheets(filtered);
-      }
     };
 
     fetchProjects();
@@ -843,24 +824,6 @@ const Dashboard = () => {
           </p>
         </div>
         <div className="flex flex-wrap gap-2 w-full lg:w-auto">
-          <div className="flex items-center gap-2 px-3 border border-gray-200 rounded bg-white shadow-sm h-9">
-            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Auto Sync</span>
-            <input 
-              type="checkbox" 
-              checked={autoSync} 
-              onChange={(e) => setAutoSync(e.target.checked)}
-              className="w-3.5 h-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-600 cursor-pointer"
-            />
-          </div>
-          <Button 
-            variant="outline" 
-            onClick={() => syncToSheets(projects)} 
-            disabled={syncing}
-            className="flex-1 lg:flex-none h-9 text-[10px] lg:text-xs font-bold uppercase tracking-wider border-gray-300 bg-white hover:bg-gray-50 shadow-sm"
-          >
-            <Activity className={cn("w-3.5 h-3.5 mr-2", syncing && "animate-spin")} />
-            {syncing ? 'Syncing...' : 'Sync Sheets'}
-          </Button>
           <Button variant="outline" onClick={exportToCSV} className="flex-1 lg:flex-none h-9 text-[10px] lg:text-xs font-bold uppercase tracking-wider border-gray-300 bg-white hover:bg-gray-50 shadow-sm">
             <FileText className="w-3.5 h-3.5 mr-2" />
             Export CSV
@@ -874,20 +837,19 @@ const Dashboard = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {[
-          { label: 'TOTAL PROJECTS', value: projects.length, icon: FileText, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-b-blue-500' },
-          { label: 'ACTIVE FLOWS', value: activeProjects.length, icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-b-amber-500' },
-          { label: 'SYSTEM COMPLETED', value: completedProjects.length, icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-b-emerald-500' },
-          { label: 'SYSTEM LOAD', value: '12%', icon: Activity, color: 'text-purple-600', bg: 'bg-purple-50', border: 'border-b-purple-500' }
+          { label: 'TOTAL PROJECTS', value: projects.length, icon: FileText, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-b-gray-400' },
+          { label: 'ACTIVE FLOWS', value: activeProjects.length, icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-b-gray-400' },
+          { label: 'SYSTEM COMPLETED', value: completedProjects.length, icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-b-gray-400' }
         ].map((stat, i) => (
-          <div key={i} className={cn("bg-white p-4 border border-gray-100 rounded-lg shadow-md flex items-center gap-4 transition-all hover:shadow-xl hover:-translate-y-1 border-b-4", stat.border)}>
+          <div key={i} className={cn("bg-white p-4 border border-gray-100 rounded-lg shadow-[0_10px_20px_rgba(0,0,0,0.05),0_6px_6px_rgba(0,0,0,0.1)] flex items-center gap-4 transition-all hover:shadow-2xl hover:-translate-y-1 border-b-4", stat.border)}>
             <div className={cn("p-2.5 rounded-lg shadow-inner", stat.bg, stat.color)}>
               <stat.icon className="w-5 h-5" />
             </div>
             <div>
               <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{stat.label}</p>
-              <p className="text-2xl font-mono font-black text-gray-900 leading-none mt-1">{stat.value.toString().padStart(stat.label.includes('LOAD') ? 0 : 3, '0')}</p>
+              <p className="text-2xl font-mono font-black text-gray-900 leading-none mt-1">{stat.value.toString().padStart(3, '0')}</p>
             </div>
           </div>
         ))}
@@ -1081,24 +1043,6 @@ const NewEntry = () => {
           await sendEmailNotification(firstStep.assignedToEmail, firstStep.name, item.projectName, 'new', insertedData[0].id);
         }
       }
-
-      // 2. Sync to Google Sheets
-      try {
-        const response = await fetch('/api/append-entry', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ entries: previewList })
-        });
-        if (!response.ok) {
-          const errorData = await response.json();
-          console.warn('Google Sheets sync warning:', errorData.error);
-        }
-      } catch (sheetError) {
-        console.error('Google Sheets sync failed:', sheetError);
-      }
-
-      // 3. Send Initial Email Notifications
-      // Removed loop here as it's now handled per project creation above to get IDs
 
       toast.success('Requirements submitted successfully');
       navigate('/');
