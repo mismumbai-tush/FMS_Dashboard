@@ -57,14 +57,15 @@ function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-const sendEmailNotification = async (email: string, stepName: string, projectName: string, type: 'new' | 'update' = 'update') => {
+const sendEmailNotification = async (email: string, stepName: string, projectName: string, type: 'new' | 'update' = 'update', projectId?: string) => {
   if (!email) return;
   
   const subject = type === 'new' 
     ? `New Project Assigned: ${projectName}` 
     : `Action Required: New Step in ${projectName}`;
     
-  const dashboardLink = window.location.origin;
+  const baseUrl = 'https://fms-dashboard-two.vercel.app';
+  const dashboardLink = projectId ? `${baseUrl}/project/${projectId}` : baseUrl;
   const html = `
     <div style="font-family: sans-serif; padding: 20px; color: #333; border: 1px solid #eee; border-radius: 12px; max-width: 600px; margin: auto;">
       <div style="text-align: center; margin-bottom: 20px;">
@@ -1061,8 +1062,14 @@ const NewEntry = () => {
           status: 'Active'
         };
 
-        const { error } = await supabase.from('projects').insert([project]);
+        const { data: insertedData, error } = await supabase.from('projects').insert([project]).select();
         if (error) throw error;
+
+        // Send Initial Email Notifications for this specific project
+        const firstStep = workflowConfig.steps[0];
+        if (firstStep && firstStep.assignedToEmail && insertedData && insertedData[0]) {
+          await sendEmailNotification(firstStep.assignedToEmail, firstStep.name, item.projectName, 'new', insertedData[0].id);
+        }
       }
 
       // 2. Sync to Google Sheets
@@ -1081,12 +1088,7 @@ const NewEntry = () => {
       }
 
       // 3. Send Initial Email Notifications
-      for (const item of previewList) {
-        const firstStep = workflowConfig.steps[0];
-        if (firstStep && firstStep.assignedToEmail) {
-          await sendEmailNotification(firstStep.assignedToEmail, firstStep.name, item.projectName, 'new');
-        }
-      }
+      // Removed loop here as it's now handled per project creation above to get IDs
 
       toast.success('Requirements submitted successfully');
       navigate('/');
@@ -1332,7 +1334,7 @@ const ProjectDetail = () => {
       // Send Email Notification for next step
       const nextStep = updatedSteps[nextStepIndex];
       if (nextStep && status === 'Done') {
-        await sendEmailNotification(nextStep.assignedToEmail, nextStep.name, project.project_name);
+        await sendEmailNotification(nextStep.assignedToEmail, nextStep.name, project.project_name, 'update', projectId);
         toast.info(`Notification sent to ${nextStep.assignedToEmail} for next step: ${nextStep.name}`);
       }
 
