@@ -46,7 +46,11 @@ import {
   X,
   Menu,
   FilePlus,
-  Activity
+  Activity,
+  GripVertical,
+  Trash2,
+  ChevronUp,
+  ChevronDown
 } from 'lucide-react';
 import { format, addDays } from 'date-fns';
 import { clsx, type ClassValue } from 'clsx';
@@ -747,13 +751,7 @@ const Dashboard = () => {
       }
 
       const projectList = data as any[];
-      const filtered = profile.role === 'Admin' 
-        ? projectList 
-        : projectList.filter(p => 
-            p.steps[p.current_step_index]?.assignedToEmail === profile.email
-          );
-
-      setProjects(filtered);
+      setProjects(projectList);
       setLoading(false);
     };
 
@@ -954,6 +952,8 @@ const NewEntry = () => {
   });
   const [previewList, setPreviewList] = useState<any[]>([]);
   const [workflowConfig, setWorkflowConfig] = useState<WorkflowConfig | null>(null);
+  const [customSteps, setCustomSteps] = useState<WorkflowConfigStep[]>([]);
+  const [isConfigOpen, setIsConfigOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
@@ -962,6 +962,7 @@ const NewEntry = () => {
       const { data, error } = await supabase.from('config').select('*').eq('id', 'workflow').single();
       if (data) {
         setWorkflowConfig(data.data as WorkflowConfig);
+        setCustomSteps([]); // Start with empty steps as requested
       } else {
         // Fallback to default steps if not configured in DB
         const defaultSteps = WORKFLOW_STEP_NAMES.map(name => ({
@@ -970,6 +971,7 @@ const NewEntry = () => {
           tat: 0
         }));
         setWorkflowConfig({ steps: defaultSteps });
+        setCustomSteps([]); // Start with empty steps as requested
       }
     };
     fetchConfig();
@@ -1006,7 +1008,7 @@ const NewEntry = () => {
       // 1. Save to Supabase
       for (const item of previewList) {
         let cumulativeDays = 0;
-        const steps: WorkflowStep[] = workflowConfig.steps.map((s, idx) => {
+        const steps: WorkflowStep[] = customSteps.map((s, idx) => {
           cumulativeDays += s.tat;
           return {
             name: s.name,
@@ -1212,7 +1214,15 @@ const NewEntry = () => {
               </div>
             )}
           </div>
-          <div className="p-6 border-t border-gray-200 bg-gray-50">
+          <div className="p-6 border-t border-gray-200 bg-gray-50 space-y-3">
+            <Button 
+              onClick={() => setIsConfigOpen(true)}
+              variant="outline"
+              className="w-full h-10 text-xs font-bold uppercase tracking-widest border-blue-200 text-blue-600 hover:bg-blue-50"
+            >
+              <Settings className="w-4 h-4 mr-2" />
+              Workflow Config
+            </Button>
             <Button 
               onClick={handleSubmit} 
               disabled={loading || previewList.length === 0}
@@ -1224,6 +1234,144 @@ const NewEntry = () => {
           </div>
         </div>
       </div>
+
+      <AnimatePresence>
+        {isConfigOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col"
+            >
+              <div className="bg-gray-50 px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                <div>
+                  <h2 className="text-lg font-black uppercase tracking-tight text-gray-900">Project Workflow Configuration</h2>
+                  <p className="text-[10px] text-gray-500 font-mono uppercase tracking-widest">Customize steps for this requirement</p>
+                </div>
+                <button onClick={() => setIsConfigOpen(false)} className="p-2 hover:bg-gray-200 rounded-full transition-colors">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-hidden flex flex-col lg:flex-row">
+                {/* Left Side: Available Steps */}
+                <div className="w-full lg:w-64 bg-gray-50 border-r border-gray-200 p-4 overflow-y-auto">
+                  <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">Available Steps</h3>
+                  <div className="space-y-2">
+                    {WORKFLOW_STEP_NAMES.map((name) => (
+                      <button
+                        key={name}
+                        onClick={() => {
+                          const defaultStep = workflowConfig?.steps.find(s => s.name === name);
+                          setCustomSteps([...customSteps, { 
+                            name, 
+                            assignedToEmail: defaultStep?.assignedToEmail || '', 
+                            tat: defaultStep?.tat || 0 
+                          }]);
+                        }}
+                        className="w-full text-left p-3 bg-white border border-gray-200 rounded text-xs font-bold hover:border-blue-500 hover:text-blue-600 transition-all flex items-center justify-between group"
+                      >
+                        {name}
+                        <PlusCircle className="w-3 h-3 opacity-0 group-hover:opacity-100" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Right Side: Configured Workflow */}
+                <div className="flex-1 p-6 overflow-y-auto">
+                  <div className="bg-white border border-gray-200 rounded shadow-sm overflow-hidden">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-gray-100 border-b border-gray-200">
+                          <th className="px-4 py-3 text-[10px] font-black text-gray-500 uppercase tracking-widest w-16">Seq</th>
+                          <th className="px-4 py-3 text-[10px] font-black text-gray-500 uppercase tracking-widest">Process Step Name</th>
+                          <th className="px-4 py-3 text-[10px] font-black text-gray-500 uppercase tracking-widest w-24">TAT (Days)</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {customSteps.map((step, index) => (
+                          <tr key={index} className="group">
+                            <td className="px-4 py-3">
+                              <div className="flex flex-col items-center gap-1">
+                                <button 
+                                  disabled={index === 0}
+                                  onClick={() => {
+                                    const newSteps = [...customSteps];
+                                    [newSteps[index - 1], newSteps[index]] = [newSteps[index], newSteps[index - 1]];
+                                    setCustomSteps(newSteps);
+                                  }}
+                                  className="p-0.5 text-gray-400 hover:text-blue-600 disabled:opacity-20"
+                                >
+                                  <ChevronUp className="w-3 h-3" />
+                                </button>
+                                <span className="text-xs font-mono text-gray-400">{(index + 1).toString().padStart(2, '0')}</span>
+                                <button 
+                                  disabled={index === customSteps.length - 1}
+                                  onClick={() => {
+                                    const newSteps = [...customSteps];
+                                    [newSteps[index + 1], newSteps[index]] = [newSteps[index], newSteps[index + 1]];
+                                    setCustomSteps(newSteps);
+                                  }}
+                                  className="p-0.5 text-gray-400 hover:text-blue-600 disabled:opacity-20"
+                                >
+                                  <ChevronDown className="w-3 h-3" />
+                                </button>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className="text-sm font-bold text-gray-900">{step.name}</span>
+                            </td>
+                            <td className="px-4 py-3">
+                              <input 
+                                type="number"
+                                className="w-full h-8 px-2 text-xs border border-gray-200 rounded focus:border-blue-500 outline-none"
+                                value={step.tat}
+                                onChange={(e) => {
+                                  const newSteps = [...customSteps];
+                                  newSteps[index] = { ...newSteps[index], tat: parseInt(e.target.value) || 0 };
+                                  setCustomSteps(newSteps);
+                                }}
+                              />
+                            </td>
+                          </tr>
+                        ))}
+                        {customSteps.length === 0 && (
+                          <tr>
+                            <td colSpan={5} className="px-4 py-12 text-center text-gray-400 font-mono text-[10px] uppercase tracking-widest italic">
+                              No steps added. Click on the left to add process steps.
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    if (workflowConfig) setCustomSteps(workflowConfig.steps);
+                    setIsConfigOpen(false);
+                  }}
+                  className="h-10 px-6 text-xs font-bold uppercase tracking-widest border-gray-200"
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={() => setIsConfigOpen(false)}
+                  className="h-10 px-8 text-xs font-bold uppercase tracking-widest bg-blue-600 hover:bg-blue-700"
+                >
+                  Apply Configuration
+                </Button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
