@@ -8,7 +8,7 @@ import {
   useLocation,
   useParams
 } from 'react-router-dom';
-import { supabase } from './supabase';
+import { supabase, isSupabaseConfigured } from './supabase';
 import { 
   UserProfile, 
   Project, 
@@ -109,8 +109,11 @@ const sendEmailNotification = async (email: string, stepName: string, projectNam
     } else {
       console.log('Email notification sent successfully');
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Email notification error:', error);
+    if (error.message === 'Failed to fetch') {
+      console.warn('Email API (/api/send-email) is unreachable. Ensure the server is running.');
+    }
   }
 };
 
@@ -237,6 +240,10 @@ const Login = () => {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isSupabaseConfigured()) {
+      toast.error('Supabase is not configured. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in settings.');
+      return;
+    }
     setLoading(true);
     const trimmedEmail = email.trim();
     console.log('Attempting login for:', trimmedEmail);
@@ -353,6 +360,10 @@ const SignUp = () => {
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isSupabaseConfigured()) {
+      toast.error('Supabase is not configured. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in settings.');
+      return;
+    }
     setLoading(true);
     console.log('Attempting sign up for:', formData.email);
     try {
@@ -742,6 +753,10 @@ const Dashboard = () => {
     }
 
     const fetchProjects = async () => {
+      if (!isSupabaseConfigured()) {
+        setLoading(false);
+        return;
+      }
       let query = supabase.from('projects').select('*');
       const { data, error } = await query.order('created_at', { ascending: false });
       
@@ -880,7 +895,7 @@ const Dashboard = () => {
                       <span className="text-sm font-bold text-gray-900">{project.project_name}</span>
                       <div className="flex items-center gap-2 mt-0.5">
                         <span className="text-[9px] font-mono text-gray-400 uppercase tracking-tighter">
-                          PO: {project.po_number} | {project.customer_name}
+                          PO NO - TOTAL PIECES: {project.po_number} | {project.customer_name}
                         </span>
                         <span className="text-[9px] font-mono text-emerald-600 font-bold uppercase">
                           • {format(new Date(project.created_at), 'MMM dd')}
@@ -959,6 +974,7 @@ const NewEntry = () => {
 
   useEffect(() => {
     const fetchConfig = async () => {
+      if (!isSupabaseConfigured()) return;
       const { data, error } = await supabase.from('config').select('*').eq('id', 'workflow').single();
       if (data) {
         setWorkflowConfig(data.data as WorkflowConfig);
@@ -1095,7 +1111,7 @@ const NewEntry = () => {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
-                <label className="text-[10px] font-black text-black uppercase tracking-widest">PO Number</label>
+                <label className="text-[10px] font-black text-black uppercase tracking-widest">PO NUMBERS - TOTAL PIECES</label>
                 <input
                   required
                   className="w-full h-9 px-3 text-sm border border-gray-200 rounded focus:border-blue-500 outline-none transition-colors"
@@ -1117,7 +1133,7 @@ const NewEntry = () => {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
-                <label className="text-[10px] font-black text-black uppercase tracking-widest">Article Name</label>
+                <label className="text-[10px] font-black text-black uppercase tracking-widest">ARTICLE NAME / TOTAL ARTICLES</label>
                 <input
                   required
                   className="w-full h-9 px-3 text-sm border border-gray-200 rounded focus:border-blue-500 outline-none transition-colors"
@@ -1126,7 +1142,7 @@ const NewEntry = () => {
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-[10px] font-black text-black uppercase tracking-widest">Color</label>
+                <label className="text-[10px] font-black text-black uppercase tracking-widest">TOTAL COLORS</label>
                 <input
                   required
                   className="w-full h-9 px-3 text-sm border border-gray-200 rounded focus:border-blue-500 outline-none transition-colors"
@@ -1190,10 +1206,10 @@ const NewEntry = () => {
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
                     <p className="text-[10px] font-mono text-gray-700 uppercase"><span className="text-black font-black">CUSTOMER:</span> {item.customerName}</p>
-                    <p className="text-[10px] font-mono text-gray-700 uppercase"><span className="text-black font-black">PO NO:</span> {item.poNumber}</p>
+                    <p className="text-[10px] font-mono text-gray-700 uppercase"><span className="text-black font-black">PO NO - TOTAL PIECES:</span> {item.poNumber}</p>
                     <p className="text-[10px] font-mono text-gray-700 uppercase"><span className="text-black font-black">PO DATE:</span> {item.poDate}</p>
-                    <p className="text-[10px] font-mono text-gray-700 uppercase"><span className="text-black font-black">ARTICLE:</span> {item.articleName}</p>
-                    <p className="text-[10px] font-mono text-gray-700 uppercase"><span className="text-black font-black">COLOR:</span> {item.color}</p>
+                    <p className="text-[10px] font-mono text-gray-700 uppercase"><span className="text-black font-black">ARTICLE / TOTAL ARTICLES:</span> {item.articleName}</p>
+                    <p className="text-[10px] font-mono text-gray-700 uppercase"><span className="text-black font-black">TOTAL COLORS:</span> {item.color}</p>
                     <p className="text-[10px] font-mono text-gray-700 uppercase"><span className="text-black font-black">ORDER DT:</span> {item.orderDate}</p>
                     <p className="text-[10px] font-mono text-gray-700 uppercase"><span className="text-black font-black">DISPATCH:</span> {item.dispatchDate}</p>
                     {item.remark && <p className="text-[10px] font-mono text-gray-700 uppercase col-span-2"><span className="text-black font-black">REMARKS:</span> {item.remark}</p>}
@@ -1388,6 +1404,10 @@ const ProjectDetail = () => {
   useEffect(() => {
     if (!projectId) return;
     const fetchProject = async () => {
+      if (!isSupabaseConfigured()) {
+        setLoading(false);
+        return;
+      }
       const { data, error } = await supabase.from('projects').select('*').eq('id', projectId).single();
       if (data) {
         setProject(data as Project);
@@ -1465,7 +1485,7 @@ const ProjectDetail = () => {
           </button>
           <div className="overflow-hidden">
             <h1 className="text-xl lg:text-3xl font-bold text-gray-900 truncate">{project.project_name}</h1>
-            <p className="text-xs lg:text-sm text-gray-500 truncate uppercase tracking-widest font-mono">PO: {project.po_number} | {project.customer_name}</p>
+            <p className="text-xs lg:text-sm text-gray-500 truncate uppercase tracking-widest font-mono">PO NO - TOTAL PIECES: {project.po_number} | {project.customer_name}</p>
           </div>
         </div>
       </div>
@@ -1517,8 +1537,8 @@ const ProjectDetail = () => {
           <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-4">
             <h2 className="text-lg font-bold">Project Info</h2>
             <div className="space-y-3">
-              <InfoRow label="Article" value={project.article_name} />
-              <InfoRow label="Color" value={project.color} />
+              <InfoRow label="Article Name / Total Articles" value={project.article_name} />
+              <InfoRow label="Total Colors" value={project.color} />
               <InfoRow label="PO Date" value={project.po_date ? format(new Date(project.po_date), 'PPP') : 'N/A'} />
               <InfoRow label="Order Date" value={project.order_date ? format(new Date(project.order_date), 'PPP') : 'N/A'} />
               <InfoRow label="Dispatch Date" value={project.dispatch_date ? format(new Date(project.dispatch_date), 'PPP') : 'N/A'} />
@@ -1664,6 +1684,10 @@ const WorkflowConfigView = () => {
 
   useEffect(() => {
     const fetchConfig = async () => {
+      if (!isSupabaseConfigured()) {
+        setLoading(false);
+        return;
+      }
       const { data, error } = await supabase.from('config').select('*').eq('id', 'workflow').single();
       if (data) {
         setSteps(data.data.steps);
@@ -2053,6 +2077,10 @@ export default function App() {
   }, []);
 
   const fetchProfile = async (uid: string, currentUser?: any) => {
+    if (!isSupabaseConfigured()) {
+      setLoading(false);
+      return;
+    }
     if (uid === lastFetchedUid.current && profile) return;
     lastFetchedUid.current = uid;
     
