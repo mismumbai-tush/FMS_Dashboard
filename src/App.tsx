@@ -1142,7 +1142,7 @@ const NewEntry = () => {
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-[10px] font-black text-black uppercase tracking-widest">TOTAL COLORS</label>
+                <label className="text-[10px] font-black text-black uppercase tracking-widest">COLORS / TOTAL COLORS</label>
                 <input
                   required
                   className="w-full h-9 px-3 text-sm border border-gray-200 rounded focus:border-blue-500 outline-none transition-colors"
@@ -1209,7 +1209,7 @@ const NewEntry = () => {
                     <p className="text-[10px] font-mono text-gray-700 uppercase"><span className="text-black font-black">PO NO - TOTAL PIECES:</span> {item.poNumber}</p>
                     <p className="text-[10px] font-mono text-gray-700 uppercase"><span className="text-black font-black">PO DATE:</span> {item.poDate}</p>
                     <p className="text-[10px] font-mono text-gray-700 uppercase"><span className="text-black font-black">ARTICLE / TOTAL ARTICLES:</span> {item.articleName}</p>
-                    <p className="text-[10px] font-mono text-gray-700 uppercase"><span className="text-black font-black">TOTAL COLORS:</span> {item.color}</p>
+                    <p className="text-[10px] font-mono text-gray-700 uppercase"><span className="text-black font-black">COLORS / TOTAL COLORS:</span> {item.color}</p>
                     <p className="text-[10px] font-mono text-gray-700 uppercase"><span className="text-black font-black">ORDER DT:</span> {item.orderDate}</p>
                     <p className="text-[10px] font-mono text-gray-700 uppercase"><span className="text-black font-black">DISPATCH:</span> {item.dispatchDate}</p>
                     {item.remark && <p className="text-[10px] font-mono text-gray-700 uppercase col-span-2"><span className="text-black font-black">REMARKS:</span> {item.remark}</p>}
@@ -1538,7 +1538,7 @@ const ProjectDetail = () => {
             <h2 className="text-lg font-bold">Project Info</h2>
             <div className="space-y-3">
               <InfoRow label="Article Name / Total Articles" value={project.article_name} />
-              <InfoRow label="Total Colors" value={project.color} />
+              <InfoRow label="Colors / Total Colors" value={project.color} />
               <InfoRow label="PO Date" value={project.po_date ? format(new Date(project.po_date), 'PPP') : 'N/A'} />
               <InfoRow label="Order Date" value={project.order_date ? format(new Date(project.order_date), 'PPP') : 'N/A'} />
               <InfoRow label="Dispatch Date" value={project.dispatch_date ? format(new Date(project.dispatch_date), 'PPP') : 'N/A'} />
