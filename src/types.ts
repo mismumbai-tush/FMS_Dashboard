@@ -32,6 +32,7 @@ export interface Project {
   po_date: string;
   article_name: string;
   color: string;
+  quantity: string;
   order_date: string;
   dispatch_date: string;
   remark?: string;
@@ -53,15 +54,16 @@ export interface WorkflowConfig {
 
 export const WORKFLOW_STEP_NAMES = [
   "Style Handover",
-  "PI Number Generation",
-  "Lab Approval",
-  "Purchase Order Confirmation",
-  "Fabric Inward Tracking",
+  "Fit Sample Approval",
+  "Lab / Strike-off Approval",
+  "Fabric / Trim PO",
+  "Fabric Inhouse",
   "FPT (Fabric Performance Test)",
   "Trims & Accessories Arrangement",
   "GPT / PP / PS",
   "Cutting",
   "Sewing",
   "Packing",
+  "FI Date",
   "Dispatch"
 ];

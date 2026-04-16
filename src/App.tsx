@@ -895,7 +895,7 @@ const Dashboard = () => {
                       <span className="text-sm font-bold text-gray-900">{project.project_name}</span>
                       <div className="flex items-center gap-2 mt-0.5">
                         <span className="text-[9px] font-mono text-gray-400 uppercase tracking-tighter">
-                          PO NO - TOTAL PIECES: {project.po_number} | {project.customer_name}
+                          PI NUMBER: {project.po_number} | {project.customer_name}
                         </span>
                         <span className="text-[9px] font-mono text-emerald-600 font-bold uppercase">
                           • {format(new Date(project.created_at), 'MMM dd')}
@@ -961,34 +961,133 @@ const NewEntry = () => {
     poDate: today,
     articleName: '',
     color: '',
+    quantity: '',
     orderDate: today,
     dispatchDate: tomorrow,
     remark: ''
   });
   const [previewList, setPreviewList] = useState<any[]>([]);
   const [workflowConfig, setWorkflowConfig] = useState<WorkflowConfig | null>(null);
-  const [customSteps, setCustomSteps] = useState<WorkflowConfigStep[]>([]);
+  const [customSteps, setCustomSteps] = useState<(WorkflowConfigStep & { plannedDate: string })[]>([]);
   const [isConfigOpen, setIsConfigOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  const calculateDates = (steps: any[], orderDate: string) => {
+    const newSteps = [...steps];
+    
+    // Default TATs as per user request
+    const defaultTATs: Record<string, number> = {
+      "Style Handover": 3,
+      "Fit Sample Approval": 15,
+      "Lab / Strike-off Approval": 7,
+      "Fabric / Trim PO": 3,
+      "Fabric Inhouse": 35,
+      "FPT (Fabric Performance Test)": 7,
+      "Trims & Accessories Arrangement": 25,
+      "GPT / PP / PS": 10,
+      "Cutting": 1,
+      "Sewing": 25,
+      "Packing": 3,
+      "FI Date": 2,
+      "Dispatch": 2
+    };
+
+    newSteps.forEach((step, index) => {
+      let baseDate = new Date(orderDate);
+      
+      // If TAT is not set, use default
+      if (step.tat === 0 && defaultTATs[step.name]) {
+        step.tat = defaultTATs[step.name];
+      }
+
+      if (step.name === "Style Handover") {
+        step.plannedDate = format(addDays(baseDate, step.tat), 'yyyy-MM-dd');
+      } else if (step.name === "Fit Sample Approval") {
+        const prev = newSteps.find(s => s.name === "Style Handover");
+        const prevDate = prev?.plannedDate ? new Date(prev.plannedDate) : baseDate;
+        step.plannedDate = format(addDays(prevDate, step.tat), 'yyyy-MM-dd');
+      } else if (step.name === "Lab / Strike-off Approval") {
+        const prev = newSteps.find(s => s.name === "Fit Sample Approval");
+        const prevDate = prev?.plannedDate ? new Date(prev.plannedDate) : baseDate;
+        step.plannedDate = format(addDays(prevDate, step.tat), 'yyyy-MM-dd');
+      } else if (step.name === "Fabric / Trim PO") {
+        const prev = newSteps.find(s => s.name === "Lab / Strike-off Approval");
+        const prevDate = prev?.plannedDate ? new Date(prev.plannedDate) : baseDate;
+        step.plannedDate = format(addDays(prevDate, step.tat), 'yyyy-MM-dd');
+      } else if (step.name === "Fabric Inhouse") {
+        const prev = newSteps.find(s => s.name === "Style Handover");
+        const prevDate = prev?.plannedDate ? new Date(prev.plannedDate) : baseDate;
+        step.plannedDate = format(addDays(prevDate, step.tat), 'yyyy-MM-dd');
+      } else if (step.name === "FPT (Fabric Performance Test)") {
+        const prev = newSteps.find(s => s.name === "Fabric Inhouse");
+        const prevDate = prev?.plannedDate ? new Date(prev.plannedDate) : baseDate;
+        step.plannedDate = format(addDays(prevDate, step.tat), 'yyyy-MM-dd');
+      } else if (step.name === "Trims & Accessories Arrangement") {
+        const prev = newSteps.find(s => s.name === "Fabric Inhouse");
+        const prevDate = prev?.plannedDate ? new Date(prev.plannedDate) : baseDate;
+        step.plannedDate = format(addDays(prevDate, step.tat), 'yyyy-MM-dd');
+      } else if (step.name === "GPT / PP / PS") {
+        const prev = newSteps.find(s => s.name === "Fabric Inhouse");
+        const prevDate = prev?.plannedDate ? new Date(prev.plannedDate) : baseDate;
+        step.plannedDate = format(addDays(prevDate, step.tat), 'yyyy-MM-dd');
+      } else if (step.name === "Cutting") {
+        const prev = newSteps.find(s => s.name === "GPT / PP / PS");
+        const prevDate = prev?.plannedDate ? new Date(prev.plannedDate) : baseDate;
+        step.plannedDate = format(addDays(prevDate, step.tat), 'yyyy-MM-dd');
+      } else if (step.name === "Sewing") {
+        const prev = newSteps.find(s => s.name === "Cutting");
+        const prevDate = prev?.plannedDate ? new Date(prev.plannedDate) : baseDate;
+        step.plannedDate = format(addDays(prevDate, step.tat), 'yyyy-MM-dd');
+      } else if (step.name === "Packing") {
+        const prev = newSteps.find(s => s.name === "Sewing");
+        const prevDate = prev?.plannedDate ? new Date(prev.plannedDate) : baseDate;
+        step.plannedDate = format(addDays(prevDate, step.tat), 'yyyy-MM-dd');
+      } else if (step.name === "FI Date") {
+        const prev = newSteps.find(s => s.name === "Packing");
+        const prevDate = prev?.plannedDate ? new Date(prev.plannedDate) : baseDate;
+        step.plannedDate = format(addDays(prevDate, step.tat), 'yyyy-MM-dd');
+      } else if (step.name === "Dispatch") {
+        const prev = newSteps.find(s => s.name === "FI Date");
+        const prevDate = prev?.plannedDate ? new Date(prev.plannedDate) : baseDate;
+        step.plannedDate = format(addDays(prevDate, step.tat), 'yyyy-MM-dd');
+      } else {
+        const prevDate = index > 0 ? new Date(newSteps[index - 1].plannedDate) : baseDate;
+        step.plannedDate = format(addDays(prevDate, step.tat), 'yyyy-MM-dd');
+      }
+    });
+    return newSteps;
+  };
+
+  useEffect(() => {
+    if (customSteps.length > 0) {
+      const updated = calculateDates(customSteps, formData.orderDate);
+      // Only update if dates actually changed to avoid infinite loop
+      if (JSON.stringify(updated) !== JSON.stringify(customSteps)) {
+        setCustomSteps(updated);
+      }
+    }
+  }, [formData.orderDate]);
 
   useEffect(() => {
     const fetchConfig = async () => {
       if (!isSupabaseConfigured()) return;
       const { data, error } = await supabase.from('config').select('*').eq('id', 'workflow').single();
-      if (data) {
-        setWorkflowConfig(data.data as WorkflowConfig);
-        setCustomSteps([]); // Start with empty steps as requested
-      } else {
-        // Fallback to default steps if not configured in DB
-        const defaultSteps = WORKFLOW_STEP_NAMES.map(name => ({
+      
+      const initialSteps = WORKFLOW_STEP_NAMES.map(name => {
+        if (data) {
+          const saved = (data.data.steps as WorkflowConfigStep[]).find(s => s.name === name);
+          if (saved) return saved;
+        }
+        return {
           name,
           assignedToEmail: '',
           tat: 0
-        }));
-        setWorkflowConfig({ steps: defaultSteps });
-        setCustomSteps([]); // Start with empty steps as requested
-      }
+        };
+      });
+
+      setWorkflowConfig({ steps: initialSteps });
+      setCustomSteps([]); // Start with empty steps as requested
     };
     fetchConfig();
   }, []);
@@ -1003,6 +1102,7 @@ const NewEntry = () => {
       poDate: today,
       articleName: '',
       color: '',
+      quantity: '',
       orderDate: today,
       dispatchDate: tomorrow,
       remark: ''
@@ -1024,11 +1124,10 @@ const NewEntry = () => {
       // 1. Save to Supabase
       for (const item of previewList) {
         let cumulativeDays = 0;
-        const steps: WorkflowStep[] = customSteps.map((s, idx) => {
-          cumulativeDays += s.tat;
+        const steps: WorkflowStep[] = customSteps.map((s) => {
           return {
             name: s.name,
-            plannedDate: addDays(new Date(item.orderDate), cumulativeDays).toISOString(),
+            plannedDate: new Date(s.plannedDate).toISOString(),
             status: 'Not Done',
             assignedToEmail: s.assignedToEmail,
             tat: s.tat
@@ -1044,6 +1143,7 @@ const NewEntry = () => {
           po_date: item.poDate,
           article_name: item.articleName,
           color: item.color,
+          quantity: item.quantity,
           order_date: item.orderDate,
           dispatch_date: item.dispatchDate,
           remark: item.remark,
@@ -1111,7 +1211,7 @@ const NewEntry = () => {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
-                <label className="text-[10px] font-black text-black uppercase tracking-widest">PO NUMBERS - TOTAL PIECES</label>
+                <label className="text-[10px] font-black text-black uppercase tracking-widest">PI NUMBER</label>
                 <input
                   required
                   className="w-full h-9 px-3 text-sm border border-gray-200 rounded focus:border-blue-500 outline-none transition-colors"
@@ -1133,7 +1233,7 @@ const NewEntry = () => {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
-                <label className="text-[10px] font-black text-black uppercase tracking-widest">ARTICLE NAME / TOTAL ARTICLES</label>
+                <label className="text-[10px] font-black text-black uppercase tracking-widest">SKU / TOTAL ARTICLES</label>
                 <input
                   required
                   className="w-full h-9 px-3 text-sm border border-gray-200 rounded focus:border-blue-500 outline-none transition-colors"
@@ -1142,7 +1242,7 @@ const NewEntry = () => {
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-[10px] font-black text-black uppercase tracking-widest">COLORS / TOTAL COLORS</label>
+                <label className="text-[10px] font-black text-black uppercase tracking-widest">COLORS</label>
                 <input
                   required
                   className="w-full h-9 px-3 text-sm border border-gray-200 rounded focus:border-blue-500 outline-none transition-colors"
@@ -1154,6 +1254,15 @@ const NewEntry = () => {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
+                <label className="text-[10px] font-black text-black uppercase tracking-widest">QUANTITY</label>
+                <input
+                  required
+                  className="w-full h-9 px-3 text-sm border border-gray-200 rounded focus:border-blue-500 outline-none transition-colors"
+                  value={formData.quantity}
+                  onChange={e => setFormData({ ...formData, quantity: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1">
                 <label className="text-[10px] font-black text-black uppercase tracking-widest">Order Date</label>
                 <input
                   type="date"
@@ -1163,6 +1272,9 @@ const NewEntry = () => {
                   onChange={e => setFormData({ ...formData, orderDate: e.target.value })}
                 />
               </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <label className="text-[10px] font-black text-black uppercase tracking-widest">Dispatch Date</label>
                 <input
@@ -1273,18 +1385,42 @@ const NewEntry = () => {
               <div className="flex-1 overflow-hidden flex flex-col lg:flex-row">
                 {/* Left Side: Available Steps */}
                 <div className="w-full lg:w-64 bg-gray-50 border-r border-gray-200 p-4 overflow-y-auto">
-                  <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">Available Steps</h3>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Available Steps</h3>
+                    <button 
+                      onClick={() => {
+                        const allSteps = WORKFLOW_STEP_NAMES.map(name => {
+                          const defaultStep = workflowConfig?.steps.find(s => s.name === name);
+                          return {
+                            name,
+                            assignedToEmail: defaultStep?.assignedToEmail || '',
+                            tat: defaultStep?.tat || 0,
+                            plannedDate: ''
+                          };
+                        });
+                        setCustomSteps(calculateDates(allSteps, formData.orderDate));
+                        toast.success('All steps added to workflow');
+                      }}
+                      className="text-[10px] font-bold text-blue-600 hover:text-blue-700 uppercase tracking-wider flex items-center gap-1"
+                    >
+                      <PlusCircle className="w-3 h-3" />
+                      Select All
+                    </button>
+                  </div>
                   <div className="space-y-2">
                     {WORKFLOW_STEP_NAMES.map((name) => (
                       <button
                         key={name}
                         onClick={() => {
                           const defaultStep = workflowConfig?.steps.find(s => s.name === name);
-                          setCustomSteps([...customSteps, { 
+                          const newStep = { 
                             name, 
                             assignedToEmail: defaultStep?.assignedToEmail || '', 
-                            tat: defaultStep?.tat || 0 
-                          }]);
+                            tat: defaultStep?.tat || 0,
+                            plannedDate: ''
+                          };
+                          const updated = calculateDates([...customSteps, newStep], formData.orderDate);
+                          setCustomSteps(updated);
                         }}
                         className="w-full text-left p-3 bg-white border border-gray-200 rounded text-xs font-bold hover:border-blue-500 hover:text-blue-600 transition-all flex items-center justify-between group"
                       >
@@ -1304,6 +1440,8 @@ const NewEntry = () => {
                           <th className="px-4 py-3 text-[10px] font-black text-gray-500 uppercase tracking-widest w-16">Seq</th>
                           <th className="px-4 py-3 text-[10px] font-black text-gray-500 uppercase tracking-widest">Process Step Name</th>
                           <th className="px-4 py-3 text-[10px] font-black text-gray-500 uppercase tracking-widest w-24">TAT (Days)</th>
+                          <th className="px-4 py-3 text-[10px] font-black text-gray-500 uppercase tracking-widest w-32">Date</th>
+                          <th className="px-4 py-3 text-[10px] font-black text-gray-500 uppercase tracking-widest w-16 text-center">Action</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
@@ -1347,9 +1485,33 @@ const NewEntry = () => {
                                 onChange={(e) => {
                                   const newSteps = [...customSteps];
                                   newSteps[index] = { ...newSteps[index], tat: parseInt(e.target.value) || 0 };
+                                  setCustomSteps(calculateDates(newSteps, formData.orderDate));
+                                }}
+                              />
+                            </td>
+                            <td className="px-4 py-3">
+                              <input 
+                                type="date"
+                                className={`w-full h-8 px-2 text-xs border border-gray-200 rounded focus:border-blue-500 outline-none font-mono ${new Date(step.plannedDate).getDay() === 0 ? 'text-red-600 font-bold' : ''}`}
+                                value={step.plannedDate}
+                                onChange={(e) => {
+                                  const newSteps = [...customSteps];
+                                  newSteps[index] = { ...newSteps[index], plannedDate: e.target.value };
                                   setCustomSteps(newSteps);
                                 }}
                               />
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              <button 
+                                onClick={() => {
+                                  const newSteps = customSteps.filter((_, i) => i !== index);
+                                  setCustomSteps(calculateDates(newSteps, formData.orderDate));
+                                }}
+                                className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-all"
+                                title="Remove Step"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
                             </td>
                           </tr>
                         ))}
@@ -1399,6 +1561,8 @@ const ProjectDetail = () => {
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [remark, setRemark] = useState('');
+  const [isEditing, setIsEditing] = useState(false);
+  const [editData, setEditData] = useState<Partial<Project>>({});
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -1411,6 +1575,7 @@ const ProjectDetail = () => {
       const { data, error } = await supabase.from('projects').select('*').eq('id', projectId).single();
       if (data) {
         setProject(data as Project);
+        setEditData(data as Project);
       }
       setLoading(false);
     };
@@ -1470,6 +1635,21 @@ const ProjectDetail = () => {
     }
   };
 
+  const handleUpdateProjectDetails = async () => {
+    if (!projectId || !editData) return;
+    setUpdating(true);
+    try {
+      const { error } = await supabase.from('projects').update(editData).eq('id', projectId);
+      if (error) throw error;
+      toast.success('Project details updated');
+      setIsEditing(false);
+    } catch (error: any) {
+      toast.error('Update failed: ' + error.message);
+    } finally {
+      setUpdating(false);
+    }
+  };
+
   if (loading) return <ProjectDetailSkeleton />;
   if (!project) return <div className="p-8">Project not found</div>;
 
@@ -1485,7 +1665,7 @@ const ProjectDetail = () => {
           </button>
           <div className="overflow-hidden">
             <h1 className="text-xl lg:text-3xl font-bold text-gray-900 truncate">{project.project_name}</h1>
-            <p className="text-xs lg:text-sm text-gray-500 truncate uppercase tracking-widest font-mono">PO NO - TOTAL PIECES: {project.po_number} | {project.customer_name}</p>
+            <p className="text-xs lg:text-sm text-gray-500 truncate uppercase tracking-widest font-mono">PI NUMBER: {project.po_number} | {project.customer_name}</p>
           </div>
         </div>
       </div>
@@ -1511,7 +1691,10 @@ const ProjectDetail = () => {
                   )}>
                     {step.name}
                   </p>
-                  <p className="text-[9px] text-gray-400 mt-0.5">
+                  <p className={cn(
+                    "text-[9px] mt-0.5",
+                    new Date(step.plannedDate).getDay() === 0 ? "text-red-600 font-black" : "text-gray-400"
+                  )}>
                     PLN: {format(new Date(step.plannedDate), 'MMM dd')}
                   </p>
                   {step.actualDate && (
@@ -1535,18 +1718,86 @@ const ProjectDetail = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-12">
         <div className="lg:col-span-1 space-y-6">
           <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-4">
-            <h2 className="text-lg font-bold">Project Info</h2>
+            <div className="flex justify-between items-center">
+              <h2 className="text-lg font-bold">Project Info</h2>
+              {profile?.role === 'Admin' && (
+                <button 
+                  onClick={() => isEditing ? handleUpdateProjectDetails() : setIsEditing(true)}
+                  className="text-[10px] font-bold uppercase tracking-widest text-blue-600 hover:text-blue-800"
+                >
+                  {isEditing ? '[ SAVE ]' : '[ EDIT ]'}
+                </button>
+              )}
+            </div>
             <div className="space-y-3">
-              <InfoRow label="Article Name / Total Articles" value={project.article_name} />
-              <InfoRow label="Colors / Total Colors" value={project.color} />
-              <InfoRow label="PO Date" value={project.po_date ? format(new Date(project.po_date), 'PPP') : 'N/A'} />
-              <InfoRow label="Order Date" value={project.order_date ? format(new Date(project.order_date), 'PPP') : 'N/A'} />
-              <InfoRow label="Dispatch Date" value={project.dispatch_date ? format(new Date(project.dispatch_date), 'PPP') : 'N/A'} />
-              <InfoRow label="Merchandiser" value={project.merchandiser_name} />
-              <div className="pt-4 border-t border-gray-50">
-                <p className="text-xs font-semibold text-gray-400 uppercase">Remark</p>
-                <p className="text-sm text-gray-600 mt-1">{project.remark || 'No remarks'}</p>
-              </div>
+              {isEditing ? (
+                <div className="space-y-3">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">SKU / Total Articles</label>
+                    <input 
+                      className="w-full h-8 px-2 text-xs border border-gray-200 rounded"
+                      value={editData.article_name}
+                      onChange={e => setEditData({...editData, article_name: e.target.value})}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">Colors</label>
+                    <input 
+                      className="w-full h-8 px-2 text-xs border border-gray-200 rounded"
+                      value={editData.color}
+                      onChange={e => setEditData({...editData, color: e.target.value})}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">Quantity</label>
+                    <input 
+                      className="w-full h-8 px-2 text-xs border border-gray-200 rounded"
+                      value={editData.quantity}
+                      onChange={e => setEditData({...editData, quantity: e.target.value})}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">PI Number</label>
+                    <input 
+                      className="w-full h-8 px-2 text-xs border border-gray-200 rounded"
+                      value={editData.po_number}
+                      onChange={e => setEditData({...editData, po_number: e.target.value})}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">Remark</label>
+                    <textarea 
+                      className="w-full p-2 text-xs border border-gray-200 rounded min-h-[60px]"
+                      value={editData.remark}
+                      onChange={e => setEditData({...editData, remark: e.target.value})}
+                    />
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    className="w-full h-8 text-[10px] font-bold uppercase"
+                    onClick={() => {
+                      setIsEditing(false);
+                      setEditData(project);
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <InfoRow label="SKU / Total Articles" value={project.article_name} />
+                  <InfoRow label="Colors" value={project.color} />
+                  <InfoRow label="Quantity" value={project.quantity} />
+                  <InfoRow label="PO Date" value={project.po_date ? format(new Date(project.po_date), 'PPP') : 'N/A'} />
+                  <InfoRow label="Order Date" value={project.order_date ? format(new Date(project.order_date), 'PPP') : 'N/A'} />
+                  <InfoRow label="Dispatch Date" value={project.dispatch_date ? format(new Date(project.dispatch_date), 'PPP') : 'N/A'} />
+                  <InfoRow label="Merchandiser" value={project.merchandiser_name} />
+                  <div className="pt-4 border-t border-gray-50">
+                    <p className="text-xs font-semibold text-gray-400 uppercase">Remark</p>
+                    <p className="text-sm text-gray-600 mt-1">{project.remark || 'No remarks'}</p>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -1648,7 +1899,10 @@ const ProjectDetail = () => {
                     <p className="text-xs text-gray-500 mt-1">Assigned to: {step.assignedToEmail}</p>
                     {step.remark && <p className="text-sm text-gray-600 mt-2 italic">"{step.remark}"</p>}
                     <div className="flex gap-4 mt-3">
-                      <div className="flex items-center gap-1 text-[10px] text-gray-400">
+                      <div className={cn(
+                        "flex items-center gap-1 text-[10px]",
+                        new Date(step.plannedDate).getDay() === 0 ? "text-red-600 font-black" : "text-gray-400"
+                      )}>
                         <Calendar className="w-3 h-3" />
                         Planned: {format(new Date(step.plannedDate), 'MMM dd')}
                       </div>
@@ -1689,16 +1943,21 @@ const WorkflowConfigView = () => {
         return;
       }
       const { data, error } = await supabase.from('config').select('*').eq('id', 'workflow').single();
-      if (data) {
-        setSteps(data.data.steps);
-      } else {
-        const initialSteps = WORKFLOW_STEP_NAMES.map(name => ({
+      
+      // Always base the list on WORKFLOW_STEP_NAMES to ensure names are up to date
+      const initialSteps = WORKFLOW_STEP_NAMES.map(name => {
+        if (data) {
+          const saved = (data.data.steps as WorkflowConfigStep[]).find(s => s.name === name);
+          if (saved) return saved;
+        }
+        return {
           name,
           assignedToEmail: '',
           tat: 0
-        }));
-        setSteps(initialSteps);
-      }
+        };
+      });
+      
+      setSteps(initialSteps);
       setLoading(false);
     };
     fetchConfig();
