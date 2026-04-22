@@ -274,11 +274,21 @@ const Login = () => {
         className="max-w-md w-full space-y-8 bg-white p-8 rounded-2xl shadow-xl border border-gray-100"
       >
         <div className="text-center">
-          <div className="bg-blue-600 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-blue-600/20">
-            <Activity className="w-8 h-8 text-white" />
+          <div className="flex justify-center mb-6">
+            <div className="relative group">
+              <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl blur opacity-25 group-hover:opacity-100 transition duration-1000 group-hover:duration-200"></div>
+              <div className="relative bg-white p-2 rounded-2xl border border-gray-100 shadow-xl overflow-hidden w-24">
+                <img 
+                  src="https://www.ginzalimited.com/cdn/shop/files/Ginza_logo.jpg?v=1668509673&width=850" 
+                  alt="GINZA Logo" 
+                  className="w-full h-auto object-contain"
+                  referrerPolicy="no-referrer"
+                />
+              </div>
+            </div>
           </div>
           <h2 className="text-2xl font-black text-gray-900 tracking-tight uppercase">FMS PRO <span className="text-blue-600">LOGIN</span></h2>
-          <p className="mt-1 text-[10px] text-gray-500 font-mono uppercase tracking-widest">Follow-up Management System v2.1.0</p>
+          <p className="mt-1 text-[10px] text-gray-500 font-mono uppercase tracking-widest">Ginza Limited Process Control</p>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleLogin}>
           <div className="space-y-4">
@@ -480,8 +490,18 @@ const SignUp = () => {
         className="max-w-md w-full space-y-8 bg-white p-8 rounded-2xl shadow-xl border border-gray-100"
       >
         <div className="text-center">
-          <div className="bg-blue-600 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-blue-600/20">
-            <Activity className="w-8 h-8 text-white" />
+          <div className="flex justify-center mb-6">
+            <div className="relative group">
+              <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl blur opacity-25 group-hover:opacity-100 transition duration-1000 group-hover:duration-200"></div>
+              <div className="relative bg-white p-2 rounded-2xl border border-gray-100 shadow-xl overflow-hidden w-24">
+                <img 
+                  src="https://www.ginzalimited.com/cdn/shop/files/Ginza_logo.jpg?v=1668509673&width=850" 
+                  alt="GINZA Logo" 
+                  className="w-full h-auto object-contain"
+                  referrerPolicy="no-referrer"
+                />
+              </div>
+            </div>
           </div>
           <h2 className="text-2xl font-black text-gray-900 tracking-tight uppercase">FMS PRO <span className="text-blue-600">SIGNUP</span></h2>
           <p className="mt-1 text-[10px] text-gray-500 font-mono uppercase tracking-widest">Create New Operator Identity</p>
@@ -1125,11 +1145,21 @@ const NewEntry = () => {
       for (const item of previewList) {
         let cumulativeDays = 0;
         const steps: WorkflowStep[] = customSteps.map((s) => {
+          let assignedEmail = s.assignedToEmail;
+          
+          // Custom Logic for specific users for first 3 steps
+          const specialEmails = ['pravin.kharat@ginzalimited.com', 'sanjay.baldua@ginzalimited.com'];
+          const firstThreeSteps = ["Style Handover", "Fit Sample Approval", "Lab / Strike-off Approval"];
+          
+          if (firstThreeSteps.includes(s.name) && profile?.email && specialEmails.includes(profile.email.toLowerCase())) {
+            assignedEmail = profile.email.toLowerCase();
+          }
+
           return {
             name: s.name,
             plannedDate: new Date(s.plannedDate).toISOString(),
             status: 'Not Done',
-            assignedToEmail: s.assignedToEmail,
+            assignedToEmail: assignedEmail,
             tat: s.tat
           };
         });
