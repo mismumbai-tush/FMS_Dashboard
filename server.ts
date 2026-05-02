@@ -51,7 +51,7 @@ apiRouter.post("/send-email", async (req, res) => {
     }
 
     const info = await transporter.sendMail({
-      from: `"FMS System" <${user}>`,
+      from: `"GINZA FMS PRO" <${user}>`,
       to,
       subject,
       text,

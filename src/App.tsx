@@ -806,11 +806,12 @@ const Dashboard = () => {
 
   const exportToCSV = () => {
     if (projects.length === 0) return;
-    const headers = ["Project Name", "Customer", "PO Number", "Current Step", "Status", "Created At"];
+    const headers = ["Project Name", "Customer", "PO Number", "Quantity", "Current Step", "Status", "Created At"];
     const rows = projects.map(p => [
       p.project_name,
       p.customer_name,
       p.po_number,
+      p.quantity,
       p.steps[p.current_step_index]?.name || 'Completed',
       p.status,
       p.created_at
@@ -915,7 +916,7 @@ const Dashboard = () => {
                       <span className="text-sm font-bold text-gray-900">{project.project_name}</span>
                       <div className="flex items-center gap-2 mt-0.5">
                         <span className="text-[9px] font-mono text-gray-400 uppercase tracking-tighter">
-                          PI NUMBER: {project.po_number} | {project.customer_name}
+                          PI NUMBER: {project.po_number} | QTY: {project.quantity} | {project.customer_name}
                         </span>
                         <span className="text-[9px] font-mono text-emerald-600 font-bold uppercase">
                           • {format(new Date(project.created_at), 'MMM dd')}
@@ -1186,17 +1187,27 @@ const NewEntry = () => {
         if (error) throw error;
 
         // Send Initial Email Notifications for this specific project
-        const firstStep = workflowConfig.steps[0];
-        if (firstStep && firstStep.assignedToEmail && insertedData && insertedData[0]) {
-          await sendEmailNotification(firstStep.assignedToEmail, firstStep.name, item.projectName, 'new', insertedData[0].id);
+        const firstStepInProject = steps[0];
+        if (firstStepInProject && firstStepInProject.assignedToEmail && insertedData && insertedData[0]) {
+          try {
+            await sendEmailNotification(firstStepInProject.assignedToEmail, firstStepInProject.name, item.projectName, 'new', insertedData[0].id);
+          } catch (emailError) {
+            console.error('Email notification failed but project was created:', emailError);
+            // We don't throw here so the user doesn't think the whole submission failed
+          }
         }
       }
 
       toast.success('Requirements submitted successfully');
       navigate('/');
-    } catch (error) {
-      console.error('Error submitting requirements:', error);
-      toast.error('Failed to submit requirements');
+    } catch (error: any) {
+      console.error('CRITICAL: Submission error:', error);
+      const errorMessage = error.message || 'Unknown database error';
+      toast.error(`Submission Failed: ${errorMessage}`);
+      
+      if (errorMessage.includes('column') || errorMessage.includes('relation')) {
+        toast.info('This usually means your Supabase database schema needs to be updated with the new fields (like quantity).', { duration: 6000 });
+      }
     } finally {
       setLoading(false);
     }
@@ -1353,6 +1364,7 @@ const NewEntry = () => {
                     <p className="text-[10px] font-mono text-gray-700 uppercase"><span className="text-black font-black">ARTICLE / TOTAL ARTICLES:</span> {item.articleName}</p>
                     <p className="text-[10px] font-mono text-gray-700 uppercase"><span className="text-black font-black">COLORS / TOTAL COLORS:</span> {item.color}</p>
                     <p className="text-[10px] font-mono text-gray-700 uppercase"><span className="text-black font-black">ORDER DT:</span> {item.orderDate}</p>
+                    <p className="text-[10px] font-mono text-gray-700 uppercase"><span className="text-black font-black">QUANTITY:</span> {item.quantity}</p>
                     <p className="text-[10px] font-mono text-gray-700 uppercase"><span className="text-black font-black">DISPATCH:</span> {item.dispatchDate}</p>
                     {item.remark && <p className="text-[10px] font-mono text-gray-700 uppercase col-span-2"><span className="text-black font-black">REMARKS:</span> {item.remark}</p>}
                   </div>
