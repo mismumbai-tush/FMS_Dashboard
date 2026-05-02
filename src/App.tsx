@@ -1146,21 +1146,11 @@ const NewEntry = () => {
       for (const item of previewList) {
         let cumulativeDays = 0;
         const steps: WorkflowStep[] = customSteps.map((s) => {
-          let assignedEmail = s.assignedToEmail;
-          
-          // Custom Logic for specific users for first 3 steps
-          const specialEmails = ['pravin.kharat@ginzalimited.com', 'sanjay.baldua@ginzalimited.com'];
-          const firstThreeSteps = ["Style Handover", "Fit Sample Approval", "Lab / Strike-off Approval"];
-          
-          if (firstThreeSteps.includes(s.name) && profile?.email && specialEmails.includes(profile.email.toLowerCase())) {
-            assignedEmail = profile.email.toLowerCase();
-          }
-
           return {
             name: s.name,
             plannedDate: new Date(s.plannedDate).toISOString(),
             status: 'Not Done',
-            assignedToEmail: assignedEmail,
+            assignedToEmail: s.assignedToEmail,
             tat: s.tat
           };
         });
@@ -1193,7 +1183,7 @@ const NewEntry = () => {
             await sendEmailNotification(firstStepInProject.assignedToEmail, firstStepInProject.name, item.projectName, 'new', insertedData[0].id);
           } catch (emailError) {
             console.error('Email notification failed but project was created:', emailError);
-            // We don't throw here so the user doesn't think the whole submission failed
+            toast.warning('Project created, but email notification failed. Check SMTP settings.', { duration: 5000 });
           }
         }
       }
@@ -1663,8 +1653,13 @@ const ProjectDetail = () => {
       // Send Email Notification for next step
       const nextStep = updatedSteps[nextStepIndex];
       if (nextStep && status === 'Done') {
-        await sendEmailNotification(nextStep.assignedToEmail, nextStep.name, project.project_name, 'update', projectId);
-        toast.info(`Notification sent to ${nextStep.assignedToEmail} for next step: ${nextStep.name}`);
+        try {
+          await sendEmailNotification(nextStep.assignedToEmail, nextStep.name, project.project_name, 'update', projectId);
+          toast.info(`Notification sent to ${nextStep.assignedToEmail} for next step: ${nextStep.name}`);
+        } catch (emailError) {
+          console.error('Email notification failed:', emailError);
+          toast.warning(`Step updated, but email to ${nextStep.assignedToEmail} failed.`);
+        }
       }
 
       if (isLastStep && status === 'Done') {
