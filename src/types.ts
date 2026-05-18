@@ -22,6 +22,12 @@ export interface WorkflowStep {
   tat: number; // days
 }
 
+export interface Article {
+  sku: string;
+  color: string;
+  quantity: string;
+}
+
 export interface Project {
   id: string;
   merchandiser_uid: string;
@@ -31,6 +37,7 @@ export interface Project {
   po_number: string;
   po_date: string;
   article_name: string;
+  articles?: Article[];
   color: string;
   quantity: string;
   order_date: string;

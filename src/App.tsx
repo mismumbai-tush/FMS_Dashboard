@@ -25,6 +25,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   LayoutDashboard, 
   PlusCircle, 
+  Plus,
   Settings, 
   LogOut, 
   CheckCircle2, 
@@ -980,9 +981,10 @@ const NewEntry = () => {
     projectName: '',
     poNumber: '',
     poDate: today,
-    articleName: '',
-    color: '',
-    quantity: '',
+    articles: [
+      { sku: '', color: '', quantity: '' },
+      { sku: '', color: '', quantity: '' }
+    ],
     orderDate: today,
     dispatchDate: tomorrow,
     remark: ''
@@ -1121,9 +1123,10 @@ const NewEntry = () => {
       projectName: '',
       poNumber: '',
       poDate: today,
-      articleName: '',
-      color: '',
-      quantity: '',
+      articles: [
+        { sku: '', color: '', quantity: '' },
+        { sku: '', color: '', quantity: '' }
+      ],
       orderDate: today,
       dispatchDate: tomorrow,
       remark: ''
@@ -1155,6 +1158,13 @@ const NewEntry = () => {
           };
         });
 
+        const firstSku = item.articles && item.articles[0] ? item.articles[0].sku : '';
+        const firstColor = item.articles && item.articles[0] ? item.articles[0].color : '';
+        const firstQty = item.articles && item.articles[0] ? item.articles[0].quantity : '';
+        
+        const totalQty = item.articles ? item.articles.reduce((acc: number, curr: any) => acc + (parseInt(curr.quantity) || 0), 0) : 0;
+        const displayQty = totalQty > 0 ? totalQty.toString() : firstQty;
+
         const project = {
           merchandiser_uid: profile!.uid,
           merchandiser_name: `${profile!.first_name} ${profile!.last_name}`,
@@ -1162,9 +1172,10 @@ const NewEntry = () => {
           project_name: item.projectName,
           po_number: item.poNumber,
           po_date: item.poDate,
-          article_name: item.articleName,
-          color: item.color,
-          quantity: item.quantity,
+          article_name: item.articles && item.articles.length > 1 ? `${firstSku} (+${item.articles.length - 1} more)` : firstSku,
+          color: item.articles && item.articles.length > 1 ? `${firstColor} (+${item.articles.length - 1} more)` : firstColor,
+          quantity: displayQty,
+          articles: item.articles,
           order_date: item.orderDate,
           dispatch_date: item.dispatchDate,
           remark: item.remark,
@@ -1262,37 +1273,96 @@ const NewEntry = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <label className="text-[10px] font-black text-black uppercase tracking-widest">SKU / TOTAL ARTICLES</label>
-                <input
-                  required
-                  className="w-full h-9 px-3 text-sm border border-gray-200 rounded focus:border-blue-500 outline-none transition-colors"
-                  value={formData.articleName}
-                  onChange={e => setFormData({ ...formData, articleName: e.target.value })}
-                />
+            <div className="space-y-4 pt-2">
+              <div className="flex justify-between items-center border-b border-gray-100 pb-2">
+                <h3 className="text-[10px] font-black uppercase tracking-widest text-blue-600">Article Details</h3>
+                <button 
+                  type="button" 
+                  className="flex items-center gap-1 px-2 py-1 bg-gray-900 text-white text-[9px] font-black uppercase tracking-widest rounded hover:bg-gray-800 transition-colors"
+                  onClick={() => setFormData({
+                    ...formData,
+                    articles: [...formData.articles, { sku: '', color: '', quantity: '' }]
+                  })}
+                >
+                  <Plus className="w-3 h-3" /> Add Row
+                </button>
               </div>
-              <div className="space-y-1">
-                <label className="text-[10px] font-black text-black uppercase tracking-widest">COLORS</label>
-                <input
-                  required
-                  className="w-full h-9 px-3 text-sm border border-gray-200 rounded focus:border-blue-500 outline-none transition-colors"
-                  value={formData.color}
-                  onChange={e => setFormData({ ...formData, color: e.target.value })}
-                />
+              <div className="border border-gray-200 rounded overflow-hidden">
+                <table className="w-full text-left border-collapse">
+                  <thead className="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                      <th className="px-3 py-2 text-[9px] font-black uppercase tracking-widest text-gray-500 w-10">Sr</th>
+                      <th className="px-3 py-2 text-[9px] font-black uppercase tracking-widest text-gray-500">SKU / Articles</th>
+                      <th className="px-3 py-2 text-[9px] font-black uppercase tracking-widest text-gray-500">Colors</th>
+                      <th className="px-3 py-2 text-[9px] font-black uppercase tracking-widest text-gray-500 w-24">Qty</th>
+                      <th className="px-3 py-2 text-[9px] font-black uppercase tracking-widest text-gray-500 w-8"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {formData.articles.map((art, idx) => (
+                      <tr key={idx} className="border-b border-gray-100 last:border-0 hover:bg-gray-50/50 transition-colors">
+                        <td className="px-3 py-2 text-[10px] font-mono text-gray-400">{idx + 1}</td>
+                        <td className="px-3 py-2">
+                          <input
+                            required
+                            placeholder="Article name..."
+                            className="w-full h-8 px-2 text-xs border border-gray-100 rounded focus:border-blue-400 outline-none"
+                            value={art.sku}
+                            onChange={e => {
+                              const newArticles = [...formData.articles];
+                              newArticles[idx] = { ...newArticles[idx], sku: e.target.value };
+                              setFormData({ ...formData, articles: newArticles });
+                            }}
+                          />
+                        </td>
+                        <td className="px-3 py-2">
+                          <input
+                            required
+                            placeholder="Colors..."
+                            className="w-full h-8 px-2 text-xs border border-gray-100 rounded focus:border-blue-400 outline-none"
+                            value={art.color}
+                            onChange={e => {
+                              const newArticles = [...formData.articles];
+                              newArticles[idx] = { ...newArticles[idx], color: e.target.value };
+                              setFormData({ ...formData, articles: newArticles });
+                            }}
+                          />
+                        </td>
+                        <td className="px-3 py-2">
+                          <input
+                            required
+                            placeholder="Qty"
+                            className="w-full h-8 px-2 text-xs border border-gray-100 rounded focus:border-blue-400 outline-none"
+                            value={art.quantity}
+                            onChange={e => {
+                              const newArticles = [...formData.articles];
+                              newArticles[idx] = { ...newArticles[idx], quantity: e.target.value };
+                              setFormData({ ...formData, articles: newArticles });
+                            }}
+                          />
+                        </td>
+                        <td className="px-3 py-2">
+                          {formData.articles.length > 1 && (
+                            <button
+                              type="button"
+                              className="text-gray-300 hover:text-red-500 transition-colors"
+                              onClick={() => {
+                                const newArticles = formData.articles.filter((_, i) => i !== idx);
+                                setFormData({ ...formData, articles: newArticles });
+                              }}
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <label className="text-[10px] font-black text-black uppercase tracking-widest">QUANTITY</label>
-                <input
-                  required
-                  className="w-full h-9 px-3 text-sm border border-gray-200 rounded focus:border-blue-500 outline-none transition-colors"
-                  value={formData.quantity}
-                  onChange={e => setFormData({ ...formData, quantity: e.target.value })}
-                />
-              </div>
               <div className="space-y-1">
                 <label className="text-[10px] font-black text-black uppercase tracking-widest">Order Date</label>
                 <input
@@ -1349,14 +1419,33 @@ const NewEntry = () => {
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
                     <p className="text-[10px] font-mono text-gray-700 uppercase"><span className="text-black font-black">CUSTOMER:</span> {item.customerName}</p>
-                    <p className="text-[10px] font-mono text-gray-700 uppercase"><span className="text-black font-black">PO NO - TOTAL PIECES:</span> {item.poNumber}</p>
+                    <p className="text-[10px] font-mono text-gray-700 uppercase"><span className="text-black font-black">PI NO:</span> {item.poNumber}</p>
                     <p className="text-[10px] font-mono text-gray-700 uppercase"><span className="text-black font-black">PO DATE:</span> {item.poDate}</p>
-                    <p className="text-[10px] font-mono text-gray-700 uppercase"><span className="text-black font-black">ARTICLE / TOTAL ARTICLES:</span> {item.articleName}</p>
-                    <p className="text-[10px] font-mono text-gray-700 uppercase"><span className="text-black font-black">COLORS / TOTAL COLORS:</span> {item.color}</p>
                     <p className="text-[10px] font-mono text-gray-700 uppercase"><span className="text-black font-black">ORDER DT:</span> {item.orderDate}</p>
-                    <p className="text-[10px] font-mono text-gray-700 uppercase"><span className="text-black font-black">QUANTITY:</span> {item.quantity}</p>
                     <p className="text-[10px] font-mono text-gray-700 uppercase"><span className="text-black font-black">DISPATCH:</span> {item.dispatchDate}</p>
-                    {item.remark && <p className="text-[10px] font-mono text-gray-700 uppercase col-span-2"><span className="text-black font-black">REMARKS:</span> {item.remark}</p>}
+                    <div className="col-span-2 mt-2 border border-gray-200 rounded overflow-hidden">
+                      <table className="w-full text-left border-collapse">
+                        <thead className="bg-gray-100 border-b border-gray-200">
+                          <tr>
+                            <th className="px-2 py-1 text-[8px] font-black uppercase tracking-widest text-gray-500 w-8">Sr</th>
+                            <th className="px-2 py-1 text-[8px] font-black uppercase tracking-widest text-gray-500">SKU / Articles</th>
+                            <th className="px-2 py-1 text-[8px] font-black uppercase tracking-widest text-gray-500">Colors</th>
+                            <th className="px-2 py-1 text-[8px] font-black uppercase tracking-widest text-gray-500">Qty</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {item.articles.map((art: any, artIdx: number) => (
+                            <tr key={artIdx} className="border-b border-gray-50 last:border-0 bg-white">
+                              <td className="px-2 py-1 text-[8px] font-mono text-gray-400">{artIdx + 1}</td>
+                              <td className="px-2 py-1 text-[9px] font-bold text-gray-700 uppercase">{art.sku}</td>
+                              <td className="px-2 py-1 text-[9px] font-bold text-gray-700 uppercase">{art.color}</td>
+                              <td className="px-2 py-1 text-[9px] font-bold text-gray-700 uppercase">{art.quantity}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    {item.remark && <p className="text-[10px] font-mono text-gray-700 uppercase col-span-2 mt-1"><span className="text-black font-black">REMARKS:</span> {item.remark}</p>}
                   </div>
                 </div>
                 <button 
@@ -1825,6 +1914,33 @@ const ProjectDetail = () => {
                   <InfoRow label="SKU / Total Articles" value={project.article_name} />
                   <InfoRow label="Colors" value={project.color} />
                   <InfoRow label="Quantity" value={project.quantity} />
+                  {project.articles && project.articles.length > 0 && (
+                    <div className="mt-4 pt-4 border-t border-gray-50">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Detailed SKU List</p>
+                      <div className="border border-gray-100 rounded overflow-hidden">
+                        <table className="w-full text-left border-collapse">
+                          <thead className="bg-gray-50 border-b border-gray-100">
+                            <tr>
+                              <th className="px-2 py-1.5 text-[8px] font-black uppercase tracking-widest text-gray-500 w-8">Sr</th>
+                              <th className="px-2 py-1.5 text-[8px] font-black uppercase tracking-widest text-gray-500">SKU</th>
+                              <th className="px-2 py-1.5 text-[8px] font-black uppercase tracking-widest text-gray-500">Color</th>
+                              <th className="px-2 py-1.5 text-[8px] font-black uppercase tracking-widest text-gray-500">Qty</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {project.articles.map((art, idx) => (
+                              <tr key={idx} className="border-b border-gray-50 last:border-0">
+                                <td className="px-2 py-1.5 text-[8px] font-mono text-gray-400">{idx + 1}</td>
+                                <td className="px-2 py-1.5 text-[10px] font-bold text-gray-900 uppercase">{art.sku}</td>
+                                <td className="px-2 py-1.5 text-[10px] font-medium text-gray-600 uppercase">{art.color}</td>
+                                <td className="px-2 py-1.5 text-[10px] font-bold text-blue-600 uppercase">{art.quantity}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
                   <InfoRow label="PO Date" value={project.po_date ? format(new Date(project.po_date), 'PPP') : 'N/A'} />
                   <InfoRow label="Order Date" value={project.order_date ? format(new Date(project.order_date), 'PPP') : 'N/A'} />
                   <InfoRow label="Dispatch Date" value={project.dispatch_date ? format(new Date(project.dispatch_date), 'PPP') : 'N/A'} />
