@@ -62,7 +62,7 @@ function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-const sendEmailNotification = async (email: string, stepName: string, projectName: string, type: 'new' | 'update' = 'update', projectId?: string) => {
+const sendEmailNotification = async (email: string, stepName: string, projectName: string, type: 'new' | 'update' = 'update', projectId?: string, extraData?: { customer?: string, po?: string, quantity?: string }) => {
   if (!email) return;
   
   const subject = type === 'new' 
@@ -80,8 +80,11 @@ const sendEmailNotification = async (email: string, stepName: string, projectNam
       <p>Hello,</p>
       <p>${type === 'new' ? 'A new project has been initialized and assigned to you.' : 'A workflow step has been completed and the next action is now in your queue.'}</p>
       <div style="background: #f8fafc; padding: 20px; border-radius: 8px; border-left: 4px solid #2563eb; margin: 20px 0;">
-        <p style="margin: 0 0 10px 0;"><strong>Project:</strong> ${projectName}</p>
-        <p style="margin: 0;"><strong>Action Required:</strong> ${stepName}</p>
+        <p style="margin: 0 0 10px 0;"><strong>Project Name:</strong> ${projectName}</p>
+        <p style="margin: 0 0 10px 0;"><strong>Customer:</strong> ${extraData?.customer || 'N/A'}</p>
+        <p style="margin: 0 0 10px 0;"><strong>PO Number:</strong> ${extraData?.po || 'N/A'}</p>
+        <p style="margin: 0 0 10px 0;"><strong>Total Quantity:</strong> ${extraData?.quantity || 'N/A'}</p>
+        <p style="margin: 10px 0 0 0; color: #2563eb; font-size: 16px;"><strong>CURRENT STEP:</strong> ${stepName}</p>
       </div>
       <div style="text-align: center; margin: 30px 0;">
         <a href="${dashboardLink}" style="background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 14px; display: inline-block;">OPEN DASHBOARD</a>
@@ -1184,14 +1187,34 @@ const NewEntry = () => {
           status: 'Active'
         };
 
-        const { data: insertedData, error } = await supabase.from('projects').insert([project]).select();
+        // Try to insert with articles column first. If it fails, fallback to stringified JSON in remark.
+        let { data: insertedData, error } = await supabase.from('projects').insert([project]).select();
+        
+        if (error && (error.message.includes('column') || error.message.includes('not found'))) {
+          console.warn('Articles column missing, falling back to remark storage:', error.message);
+          const fallbackProject = { ...project };
+          delete (fallbackProject as any).articles;
+          fallbackProject.remark = `[SKU_JSON:${JSON.stringify(project.articles)}] ${project.remark}`;
+          
+          const fallbackResult = await supabase.from('projects').insert([fallbackProject]).select();
+          insertedData = fallbackResult.data;
+          error = fallbackResult.error;
+        }
+
         if (error) throw error;
 
         // Send Initial Email Notifications for this specific project
         const firstStepInProject = steps[0];
         if (firstStepInProject && firstStepInProject.assignedToEmail && insertedData && insertedData[0]) {
           try {
-            await sendEmailNotification(firstStepInProject.assignedToEmail, firstStepInProject.name, item.projectName, 'new', insertedData[0].id);
+            await sendEmailNotification(
+              firstStepInProject.assignedToEmail, 
+              firstStepInProject.name, 
+              item.projectName, 
+              'new', 
+              insertedData[0].id,
+              { customer: item.customerName, po: item.poNumber, quantity: displayQty }
+            );
           } catch (emailError) {
             console.error('Email notification failed but project was created:', emailError);
             toast.warning('Project created, but email notification failed. Check SMTP settings.', { duration: 5000 });
@@ -1743,7 +1766,14 @@ const ProjectDetail = () => {
       const nextStep = updatedSteps[nextStepIndex];
       if (nextStep && status === 'Done') {
         try {
-          await sendEmailNotification(nextStep.assignedToEmail, nextStep.name, project.project_name, 'update', projectId);
+          await sendEmailNotification(
+            nextStep.assignedToEmail, 
+            nextStep.name, 
+            project.project_name, 
+            'update', 
+            projectId,
+            { customer: project.customer_name, po: project.po_number, quantity: project.quantity }
+          );
           toast.info(`Notification sent to ${nextStep.assignedToEmail} for next step: ${nextStep.name}`);
         } catch (emailError) {
           console.error('Email notification failed:', emailError);
@@ -1779,8 +1809,23 @@ const ProjectDetail = () => {
   if (loading) return <ProjectDetailSkeleton />;
   if (!project) return <div className="p-8">Project not found</div>;
 
-  const currentStep = project.steps[project.current_step_index];
-  const isAssigned = profile?.email === currentStep?.assignedToEmail;
+  const getArticlesFromProject = (p: Project) => {
+    if (p.articles && p.articles.length > 0) return p.articles;
+    // Fallback search in remark
+    if (p.remark && p.remark.includes('[SKU_JSON:')) {
+      try {
+        const start = p.remark.indexOf('[SKU_JSON:') + 10;
+        const end = p.remark.indexOf(']', start);
+        const jsonStr = p.remark.substring(start, end);
+        return JSON.parse(jsonStr);
+      } catch (e) {
+        console.error('Failed to parse articles from remark', e);
+      }
+    }
+    return [];
+  };
+
+  const projectArticles = getArticlesFromProject(project);
 
   return (
     <div className="p-4 lg:p-8 space-y-6 lg:space-y-8 max-w-6xl mx-auto">
@@ -1914,7 +1959,7 @@ const ProjectDetail = () => {
                   <InfoRow label="SKU / Total Articles" value={project.article_name} />
                   <InfoRow label="Colors" value={project.color} />
                   <InfoRow label="Quantity" value={project.quantity} />
-                  {project.articles && project.articles.length > 0 && (
+                  {projectArticles.length > 0 && (
                     <div className="mt-4 pt-4 border-t border-gray-50">
                       <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Detailed SKU List</p>
                       <div className="border border-gray-100 rounded overflow-hidden">
@@ -1928,12 +1973,12 @@ const ProjectDetail = () => {
                             </tr>
                           </thead>
                           <tbody>
-                            {project.articles.map((art, idx) => (
+                            {projectArticles.map((art, idx) => (
                               <tr key={idx} className="border-b border-gray-50 last:border-0">
                                 <td className="px-2 py-1.5 text-[8px] font-mono text-gray-400">{idx + 1}</td>
                                 <td className="px-2 py-1.5 text-[10px] font-bold text-gray-900 uppercase">{art.sku}</td>
                                 <td className="px-2 py-1.5 text-[10px] font-medium text-gray-600 uppercase">{art.color}</td>
-                                <td className="px-2 py-1.5 text-[10px] font-bold text-blue-600 uppercase">{art.quantity}</td>
+                                <td className="px-2 py-1.5 text-[10px] font-bold text-blue-600 uppercase">{(art as any).quantity}</td>
                               </tr>
                             ))}
                           </tbody>
