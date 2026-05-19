@@ -1187,14 +1187,31 @@ const NewEntry = () => {
           status: 'Active'
         };
 
-        // Try to insert with articles column first. If it fails, fallback to stringified JSON in remark.
+        // Try to insert with all columns first. If it fails due to missing columns, fallback to storing data in remark.
         let { data: insertedData, error } = await supabase.from('projects').insert([project]).select();
         
         if (error && (error.message.includes('column') || error.message.includes('not found'))) {
-          console.warn('Articles column missing, falling back to remark storage:', error.message);
+          console.warn('One or more columns missing, falling back to remark storage:', error.message);
           const fallbackProject = { ...project };
-          delete (fallbackProject as any).articles;
-          fallbackProject.remark = `[SKU_JSON:${JSON.stringify(project.articles)}] ${project.remark}`;
+          
+          // Identify potentially missing columns
+          const possibleMissingColumns = ['articles', 'customer_name', 'quantity', 'order_date', 'dispatch_date'];
+          let missingInRemark = "";
+          
+          possibleMissingColumns.forEach(col => {
+            if (error?.message.includes(`"${col}"`) || error?.message.includes(`column "${col}"`)) {
+              delete (fallbackProject as any)[col];
+              missingInRemark += ` [${col.toUpperCase()}: ${col === 'articles' ? JSON.stringify(project.articles) : (project as any)[col]}]`;
+            }
+          });
+
+          // If we couldn't pinpoint the column but it's a column error, try a blind fallback for columns we know were recently added
+          if (missingInRemark === "") {
+             delete (fallbackProject as any).articles;
+             missingInRemark = ` [SKU_JSON:${JSON.stringify(project.articles)}]`;
+          }
+
+          fallbackProject.remark = `${missingInRemark} ${project.remark}`;
           
           const fallbackResult = await supabase.from('projects').insert([fallbackProject]).select();
           insertedData = fallbackResult.data;
@@ -1826,6 +1843,8 @@ const ProjectDetail = () => {
   };
 
   const projectArticles = getArticlesFromProject(project);
+  const currentStep = project.steps[project.current_step_index];
+  const isAssigned = profile?.email && currentStep && profile.email === currentStep.assignedToEmail;
 
   return (
     <div className="p-4 lg:p-8 space-y-6 lg:space-y-8 max-w-6xl mx-auto">
@@ -2016,8 +2035,8 @@ const ProjectDetail = () => {
                       <Activity className="w-6 h-6" />
                     </div>
                     <div>
-                      <h2 className="text-xl font-black text-gray-900 tracking-tight uppercase">COMMAND CENTER: {currentStep.name}</h2>
-                      <p className="text-[10px] text-gray-500 font-mono uppercase tracking-widest">PLANNED_COMPLETION: {format(new Date(currentStep.plannedDate), 'PPP')}</p>
+                      <h2 className="text-xl font-black text-gray-900 tracking-tight uppercase">COMMAND CENTER: {currentStep?.name}</h2>
+                      <p className="text-[10px] text-gray-500 font-mono uppercase tracking-widest">PLANNED_COMPLETION: {currentStep?.plannedDate ? format(new Date(currentStep.plannedDate), 'PPP') : 'N/A'}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
