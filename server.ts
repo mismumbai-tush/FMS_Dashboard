@@ -28,12 +28,12 @@ apiRouter.post("/send-email", async (req, res) => {
   console.log(`[API] Attempting to send email to: ${req.body.to}`);
   try {
     const { to, subject, text, html } = req.body;
-    const user = process.env.SMTP_USER;
-    const pass = process.env.SMTP_PASS;
+    const user = process.env.SMTP_USER || process.env.SMPT_USER;
+    const pass = process.env.SMTP_PASS || process.env.SMPT_PASS;
 
     if (!user || !pass) {
-      console.error("[API] SMTP Credentials missing in environment variables");
-      return res.status(400).json({ error: "Email configuration missing on server." });
+      console.error("[API] SMTP Credentials missing in environment variables. SMTP_USER matches: " + (process.env.SMTP_USER ? "yes" : "no") + ", SMPT_USER matches: " + (process.env.SMPT_USER ? "yes" : "no"));
+      return res.status(400).json({ error: `Email configuration missing on server. Check SMTP_USER (${process.env.SMTP_USER ? "OK" : "Missing"}) or SMPT_USER (${process.env.SMPT_USER ? "OK" : "Missing"}).` });
     }
 
     const transporter = nodemailer.createTransport({

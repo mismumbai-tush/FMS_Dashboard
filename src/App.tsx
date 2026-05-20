@@ -62,6 +62,39 @@ function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+const resolveDynamicAssignee = (assignedToEmail: string, merchandiserName?: string, loggedInEmail?: string): string => {
+  if (!assignedToEmail) return '';
+  const emails = assignedToEmail.split(/[,\s;]+/).map(e => e.trim()).filter(Boolean);
+  if (emails.length === 0) return '';
+  if (emails.length === 1) return emails[0];
+
+  // 1. If logged-in user is one of the choices, use their email
+  if (loggedInEmail) {
+    const matched = emails.find(e => e.toLowerCase() === loggedInEmail.toLowerCase());
+    if (matched) return matched;
+  }
+
+  // 2. If we have a merchandiser name who created it, see if they are in the list
+  if (merchandiserName) {
+    const lowerName = merchandiserName.toLowerCase();
+    if (lowerName.includes('sanjay')) {
+      const matchSanjay = emails.find(e => e.toLowerCase().includes('sanjay'));
+      if (matchSanjay) return matchSanjay;
+    }
+    if (lowerName.includes('pravin') || lowerName.includes('kharat')) {
+      const matchPravin = emails.find(e => e.toLowerCase().includes('pravin') || e.toLowerCase().includes('kharat'));
+      if (matchPravin) return matchPravin;
+    }
+  }
+
+  // 3. Fallback
+  return emails[0] || '';
+};
+
+const getSmartAssignee = (assignedToEmail: string, loggedInEmail?: string): string => {
+  return resolveDynamicAssignee(assignedToEmail, undefined, loggedInEmail);
+};
+
 const sendEmailNotification = async (email: string, stepName: string, projectName: string, type: 'new' | 'update' = 'update', projectId?: string, extraData?: { customer?: string, po?: string, quantity?: string }) => {
   if (!email) return;
   
@@ -937,7 +970,13 @@ const Dashboard = () => {
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <span className="text-xs font-mono text-gray-600">{project.steps[project.current_step_index]?.assignedToEmail || 'SYSTEM'}</span>
+                    <span className="text-xs font-mono text-gray-600">
+                      {resolveDynamicAssignee(
+                        project.steps[project.current_step_index]?.assignedToEmail || '',
+                        project.merchandiser_name,
+                        profile?.email
+                      ) || 'SYSTEM'}
+                    </span>
                   </td>
                   <td className="px-6 py-4">
                     <span className={cn(
@@ -1151,12 +1190,27 @@ const NewEntry = () => {
       // 1. Save to Supabase
       for (const item of previewList) {
         let cumulativeDays = 0;
-        const steps: WorkflowStep[] = customSteps.map((s) => {
+        let stepsToUse = customSteps;
+        if (stepsToUse.length === 0 && workflowConfig) {
+          const allSteps = WORKFLOW_STEP_NAMES.map((name) => {
+            const defaultStep = workflowConfig.steps.find((st) => st.name === name);
+            return {
+              name,
+              assignedToEmail: defaultStep?.assignedToEmail || '',
+              tat: defaultStep?.tat || 0,
+              plannedDate: ''
+            };
+          });
+          stepsToUse = calculateDates(allSteps, item.orderDate);
+        }
+
+        const steps: WorkflowStep[] = stepsToUse.map((s, index) => {
+          const assignedEmail = getSmartAssignee(s.assignedToEmail || '', profile?.email);
           return {
             name: s.name,
             plannedDate: new Date(s.plannedDate).toISOString(),
             status: 'Not Done',
-            assignedToEmail: s.assignedToEmail,
+            assignedToEmail: assignedEmail,
             tat: s.tat
           };
         });
@@ -1550,11 +1604,12 @@ const NewEntry = () => {
                     <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Available Steps</h3>
                     <button 
                       onClick={() => {
-                        const allSteps = WORKFLOW_STEP_NAMES.map(name => {
+                        const allSteps = WORKFLOW_STEP_NAMES.map((name, index) => {
                           const defaultStep = workflowConfig?.steps.find(s => s.name === name);
+                          const assignedToEmail = getSmartAssignee(defaultStep?.assignedToEmail || '', profile?.email);
                           return {
                             name,
-                            assignedToEmail: defaultStep?.assignedToEmail || '',
+                            assignedToEmail,
                             tat: defaultStep?.tat || 0,
                             plannedDate: ''
                           };
@@ -1574,9 +1629,10 @@ const NewEntry = () => {
                         key={name}
                         onClick={() => {
                           const defaultStep = workflowConfig?.steps.find(s => s.name === name);
+                          const assignedToEmail = getSmartAssignee(defaultStep?.assignedToEmail || '', profile?.email);
                           const newStep = { 
                             name, 
-                            assignedToEmail: defaultStep?.assignedToEmail || '', 
+                            assignedToEmail, 
                             tat: defaultStep?.tat || 0,
                             plannedDate: ''
                           };
@@ -1600,6 +1656,7 @@ const NewEntry = () => {
                         <tr className="bg-gray-100 border-b border-gray-200">
                           <th className="px-4 py-3 text-[10px] font-black text-gray-500 uppercase tracking-widest w-16">Seq</th>
                           <th className="px-4 py-3 text-[10px] font-black text-gray-500 uppercase tracking-widest">Process Step Name</th>
+                          <th className="px-4 py-3 text-[10px] font-black text-gray-500 uppercase tracking-widest">Assignee Email</th>
                           <th className="px-4 py-3 text-[10px] font-black text-gray-500 uppercase tracking-widest w-24">TAT (Days)</th>
                           <th className="px-4 py-3 text-[10px] font-black text-gray-500 uppercase tracking-widest w-32">Date</th>
                           <th className="px-4 py-3 text-[10px] font-black text-gray-500 uppercase tracking-widest w-16 text-center">Action</th>
@@ -1637,6 +1694,19 @@ const NewEntry = () => {
                             </td>
                             <td className="px-4 py-3">
                               <span className="text-sm font-bold text-gray-900">{step.name}</span>
+                            </td>
+                            <td className="px-4 py-3">
+                              <input 
+                                type="email"
+                                placeholder="Enter assignee email..."
+                                className="w-full h-8 px-2 text-xs border border-gray-200 rounded focus:border-blue-500 outline-none"
+                                value={step.assignedToEmail || ''}
+                                onChange={(e) => {
+                                  const newSteps = [...customSteps];
+                                  newSteps[index] = { ...newSteps[index], assignedToEmail: e.target.value.trim() };
+                                  setCustomSteps(newSteps);
+                                }}
+                              />
                             </td>
                             <td className="px-4 py-3">
                               <input 
@@ -1693,7 +1763,13 @@ const NewEntry = () => {
                 <Button 
                   variant="outline" 
                   onClick={() => {
-                    if (workflowConfig) setCustomSteps(workflowConfig.steps);
+                    if (workflowConfig) {
+                      const resolvedSteps = workflowConfig.steps.map((st) => {
+                        const assignedToEmail = getSmartAssignee(st.assignedToEmail || '', profile?.email);
+                        return { ...st, assignedToEmail };
+                      });
+                      setCustomSteps(resolvedSteps);
+                    }
                     setIsConfigOpen(false);
                   }}
                   className="h-10 px-6 text-xs font-bold uppercase tracking-widest border-gray-200"
@@ -1844,7 +1920,10 @@ const ProjectDetail = () => {
 
   const projectArticles = getArticlesFromProject(project);
   const currentStep = project.steps[project.current_step_index];
-  const isAssigned = profile?.email && currentStep && profile.email === currentStep.assignedToEmail;
+  const resolvedCurrentAssignee = currentStep 
+    ? resolveDynamicAssignee(currentStep.assignedToEmail || '', project.merchandiser_name, profile?.email)
+    : '';
+  const isAssigned = profile?.email && resolvedCurrentAssignee && profile.email.toLowerCase() === resolvedCurrentAssignee.toLowerCase();
 
   return (
     <div className="p-4 lg:p-8 space-y-6 lg:space-y-8 max-w-6xl mx-auto">
@@ -2078,7 +2157,7 @@ const ProjectDetail = () => {
               <div className="bg-gray-50 p-8 rounded-2xl border border-dashed border-gray-200 text-center">
                 <Users className="w-12 h-12 text-gray-300 mx-auto mb-4" />
                 <h3 className="text-lg font-semibold text-gray-500">
-                  {project.status === 'Completed' ? "Project Completed" : `Waiting for ${currentStep?.assignedToEmail}`}
+                  {project.status === 'Completed' ? "Project Completed" : `Waiting for ${resolvedCurrentAssignee || 'SYSTEM'}`}
                 </h3>
                 <p className="text-sm text-gray-400 mt-1">
                   {project.status === 'Completed' ? "All steps have been successfully processed." : "You will be notified when it's your turn."}
@@ -2113,7 +2192,9 @@ const ProjectDetail = () => {
                         {step.status}
                       </span>
                     </div>
-                    <p className="text-xs text-gray-500 mt-1">Assigned to: {step.assignedToEmail}</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Assigned to: {resolveDynamicAssignee(step.assignedToEmail || '', project.merchandiser_name, profile?.email)}
+                    </p>
                     {step.remark && <p className="text-sm text-gray-600 mt-2 italic">"{step.remark}"</p>}
                     <div className="flex gap-4 mt-3">
                       <div className={cn(
