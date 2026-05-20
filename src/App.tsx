@@ -1858,19 +1858,24 @@ const ProjectDetail = () => {
       // Send Email Notification for next step
       const nextStep = updatedSteps[nextStepIndex];
       if (nextStep && status === 'Done') {
+        const recipientEmail = resolveDynamicAssignee(
+          nextStep.assignedToEmail || '',
+          project.merchandiser_name,
+          profile?.email
+        );
         try {
           await sendEmailNotification(
-            nextStep.assignedToEmail, 
+            recipientEmail, 
             nextStep.name, 
             project.project_name, 
             'update', 
             projectId,
             { customer: project.customer_name, po: project.po_number, quantity: project.quantity }
           );
-          toast.info(`Notification sent to ${nextStep.assignedToEmail} for next step: ${nextStep.name}`);
+          toast.info(`Notification sent to ${recipientEmail} for next step: ${nextStep.name}`);
         } catch (emailError) {
           console.error('Email notification failed:', emailError);
-          toast.warning(`Step updated, but email to ${nextStep.assignedToEmail} failed.`);
+          toast.warning(`Step updated, but email to ${recipientEmail} failed.`);
         }
       }
 
